@@ -4,7 +4,7 @@ Purpose
 RequestQueue is a simple class for managing multiple concurrent asynchronous URL requests in your applications.
 
 
-Supported iOS & SDK Versions
+Supported OS & SDK Versions
 -----------------------------
 
 * Supported build target - iOS 5.0 / Mac OS 10.7 (Xcode 4.2, Apple LLVM compiler 3.0)
