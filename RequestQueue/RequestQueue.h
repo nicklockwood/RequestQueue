@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.0
+//  Version 1.1
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -69,12 +69,21 @@
 typedef void (^ConnectionCompletionHandler)(NSURLResponse *response, NSData *data, NSError *error);
 
 
+typedef enum
+{
+    RequestQueueModeFirstInFirstOut = 0,
+    RequestQueueModeLastInFirstOut
+}
+RequestQueueMode;
+
+
 @interface RequestQueue : NSObject
 
 @property (nonatomic, assign) NSUInteger maxConcurrentConnectionCount;
 @property (nonatomic, assign, getter = isSuspended) BOOL suspended;
 @property (nonatomic, assign, readonly) NSUInteger requestCount;
 @property (nonatomic, strong, readonly) NSArray *requests;
+@property (nonatomic, assign) RequestQueueMode queueMode;
 
 + (RequestQueue *)mainQueue;
 

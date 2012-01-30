@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.0
+//  Version 1.1
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -79,7 +79,9 @@
 - (void)dealloc
 {
     AH_RELEASE(originalRequest);
+    AH_RELEASE(responseReceived);
     AH_RELEASE(accumulatedData);
+    AH_RELEASE(completionHandler);
     AH_SUPER_DEALLOC;
 }
 
@@ -98,6 +100,7 @@
 @synthesize maxConcurrentConnectionCount;
 @synthesize suspended;
 @synthesize connections;
+@synthesize queueMode;
 
 + (RequestQueue *)mainQueue
 {
@@ -113,10 +116,17 @@
 {
     if ((self = [super init]))
     {
+        queueMode = RequestQueueModeFirstInFirstOut;
         connections = [[NSMutableArray alloc] init];
-		maxConcurrentConnectionCount = 2;
+        maxConcurrentConnectionCount = 2;
     }
     return self;
+}
+
+- (void)dealloc
+{
+    AH_RELEASE(connections);
+    AH_SUPER_DEALLOC;
 }
 
 - (NSUInteger)requestCount
@@ -152,6 +162,8 @@
     }
 }
 
+#pragma mark Public methods
+
 - (void)setSuspended:(BOOL)_suspended
 {
     suspended = _suspended;
@@ -165,7 +177,30 @@
 {
     RequestQueueConnection *connection = [[RequestQueueConnection alloc] initWithRequest:request delegate:self startImmediately:NO];
     connection.completionHandler = completionHandler;
-    [connections addObject:connection];
+    NSInteger index = 0;
+    if (queueMode == RequestQueueModeFirstInFirstOut)
+    {
+        index = [connections count];
+    }
+    else
+    {
+        for (index = 0; index < [connections count]; index++)
+        {
+            if (![[connections objectAtIndex:index] isStarted])
+            {
+                break;
+            }
+        }
+    }
+    if (index < [connections count])
+    {
+        [connections insertObject:connection atIndex:index];
+    }
+    else
+    {
+        [connections addObject:connection];
+    }
+    AH_RELEASE(connection);
     [self dequeueConnections];
 }
 
@@ -198,8 +233,7 @@
 {
     if ([connections containsObject:connection])
     {
-        connection = AH_AUTORELEASE(AH_RETAIN(connection));
-        [connections removeObject:connection];
+        [connections removeObject:AH_AUTORELEASE(AH_RETAIN(connection))];
         if (connection.completionHandler)
         {
             connection.completionHandler(connection.responseReceived, connection.accumulatedData, error);
@@ -232,8 +266,7 @@
 {
     if ([connections containsObject:connection])
     {
-        connection = AH_AUTORELEASE(AH_RETAIN(connection));
-        [connections removeObject:connection];
+        [connections removeObject:AH_AUTORELEASE(AH_RETAIN(connection))];
         if (connection.completionHandler)
         {
             connection.completionHandler(connection.responseReceived, connection.accumulatedData, nil);

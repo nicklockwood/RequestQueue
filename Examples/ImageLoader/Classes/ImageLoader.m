@@ -47,13 +47,10 @@ NSString *const ImageDidLoadNotification = @"ImageDidLoadNotification";
 
 - (void)loadImages:(NSArray *)_urlStrings
 {	
-	self.urlStrings = [NSMutableArray array];
+	self.urlStrings = [[_urlStrings mutableCopy] autorelease];
 	self.images = [NSMutableDictionary dictionary];
 	self.loadingState = Loading;
     
-    //a queue length of 1 ensures images come back in same order they were requested
-    [RequestQueue mainQueue].maxConcurrentConnectionCount = 1;
-	
 	for (NSString *urlString in _urlStrings)
 	{
 		NSURL *URL = [NSURL URLWithString:urlString];
@@ -66,12 +63,12 @@ NSString *const ImageDidLoadNotification = @"ImageDidLoadNotification";
 				//image downloaded
 				UIImage *image = [UIImage imageWithData:data];
 				[images setObject:image forKey:urlString];
-                [urlStrings addObject:urlString];
 			}
             else
             {
                 //error
-                [urlStrings addObject:[error localizedDescription]];
+                NSInteger index = [urlStrings indexOfObject:urlString];
+                [urlStrings replaceObjectAtIndex:index withObject:[error localizedDescription]];
             }
             
             if ([urlStrings count] == [_urlStrings count])
@@ -115,7 +112,7 @@ NSString *const ImageDidLoadNotification = @"ImageDidLoadNotification";
 
 - (NSString *)imageNameAtIndex:(NSUInteger)index
 {	
-	return [[[[self.urlStrings objectAtIndex:index] componentsSeparatedByString:@"/"] lastObject] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+	return [[[self.urlStrings objectAtIndex:index] lastPathComponent] stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
 }
 
 @end

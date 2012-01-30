@@ -20,6 +20,12 @@ ARC Compatibility
 RequestQueue makes use of the ARC Helper library to automatically work with both ARC and non-ARC projects through conditional compilation. There is no need to exclude RequestQueue files from the ARC validation process, or to convert RequestQueue using the ARC conversion tool.
 
 
+Thread Safety
+--------------
+
+You can create RequestQueue instances on any thread, but each instance should only be used on a single thread. The mainQueue shared instance should only be used on the main thread.
+
+
 Installation
 --------------
 
@@ -44,6 +50,10 @@ The number of requests in the queue. This includes both active connections and w
 	@property (nonatomic, strong, readonly) NSArray *requests;
 
 The requests in the queue. This includes both active connections and waiting requests.
+
+    @property (nonatomic, assign) RequestQueueMode queueMode;
+    
+The queueMode property controls whether new request are added at the front or the back of the queue. The default value of `RequestQueueModeFirstInFirstOut` puts new request at the back of the queue and the `RequestQueueModeLastInFirstOut` value puts them at the front. Last-in-first-out means that the more recent request is given priority. Connections that are already active will still finish first, but if a large backlog of requests builds up in the queue, newer requests will not be forced to wait until the backlog is cleared before they are dealt with.
 
 
 Methods
