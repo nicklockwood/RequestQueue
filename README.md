@@ -37,7 +37,7 @@ Properties
 
 	@property (nonatomic, assign) NSUInteger maxConcurrentConnectionCount;
 	
-This is the maximum number of concurrent connections. If more requests than this are added to the queue, they will be queued until the previous request have completed. A value of 0 means that there is no limit to the number of concurrent connections. A value of 1 means that only one request will be active at a time, and will ensure that requests are completed in the same order that they are added. The default value is 2.
+This is the maximum number of concurrent connections. If more requests than this are added to the queue, they will be queued until the previous requests have completed. A value of 0 means that there is no limit to the number of concurrent connections. A value of 1 means that only one request will be active at a time, and will ensure that requests are completed in the same order that they are added (assuming `queueMode` is `RequestQueueModeFirstInFirstOut`). The default value is 2.
 	
 	@property (nonatomic, assign, getter = isSuspended) BOOL suspended;
 	
@@ -53,7 +53,7 @@ The requests in the queue. This includes both active connections and waiting req
 
     @property (nonatomic, assign) RequestQueueMode queueMode;
     
-The queueMode property controls whether new request are added at the front or the back of the queue. The default value of `RequestQueueModeFirstInFirstOut` puts new request at the back of the queue and the `RequestQueueModeLastInFirstOut` value puts them at the front. Last-in-first-out means that the more recent request is given priority. Connections that are already active will still finish first, but if a large backlog of requests builds up in the queue, newer requests will not be forced to wait until the backlog is cleared before they are dealt with.
+The queueMode property controls whether new request are added at the front or the back of the queue. The default value of `RequestQueueModeFirstInFirstOut` puts new requests at the back of the queue and the `RequestQueueModeLastInFirstOut` value puts them at the front. Last-in-first-out means that the more recent request is given priority. Connections that are already active will still finish first, but if a large backlog of requests builds up in the queue, newer requests will not be forced to wait until the backlog is cleared before they are dealt with.
 
 
 Methods
@@ -63,7 +63,7 @@ The RequestQueue class has the following methods:
 
 	+ (RequestQueue *)mainQueue;
 	
-This returns a singleton shared instance of the request queue that can be used anywhere in your app (not thread safe, must be called from the main thread). It is also perfectly acceptable to create your own queue instance for more finely-grained control over concurrency (for example, you could create a low-priority queue instance and a high priority queue so that your app can perform high-priority requests without them getting stuck behind a low priority request, waiting for it to finish).
+This returns a singleton shared instance of the request queue that can be used anywhere in your app (not thread safe, should only be called from the main thread). It is also perfectly acceptable to create your own queue instance for more finely-grained control over concurrency (for example, you could create a low-priority queue instance and a high priority queue so that your app can perform high-priority requests without them getting stuck behind a low priority request, waiting for it to finish).
 
 	- (void)addRequest:(NSURLRequest *)request completionHandler:(ConnectionCompletionHandler)completionHandler;
 	
@@ -71,11 +71,11 @@ This adds a new request to the queue. If there are fewer than `maxConcurrentConn
 	
 	- (void)cancelRequest:(NSURLRequest *)request;
 	
-This method will cancel the request if it is in progress and remove it from the queue. Regardless of whether the request had started or not, the completion handler block will receive the error NSURLErrorCancelled.
+This method will cancel the request if it is in progress and remove it from the queue. Regardless of whether the request has started or not, the completion handler block will receive the error `NSURLErrorCancelled`.
 	
 	- (void)cancelAllRequests;
 	
-This method will cancel all active and queued request and remove them from the queue.
+This method will cancel all active and queued requests and remove them from the queue.
 	
 
 Callbacks
@@ -85,4 +85,4 @@ RequestQueue defines the following callback block function that you can use to b
 
 	typedef void (^ConnectionCompletionHandler)(NSURLResponse *response, NSData *data, NSError *error);
 
-Upon completion of a request download, your callback will be called with these arguments. If the request was successful, the error parameter will be nil. In the event of an error, response and data may be nil or may not, depending on when the request failed. If the request was cancelled, the error code will be NSURLErrorCancelled.
+Upon completion of a request download, your callback will be called with these arguments. If the request was successful, the error parameter will be nil. In the event of an error, response and data may be nil or may not, depending on when the request failed. If the request was cancelled, the error code will be `NSURLErrorCancelled`.

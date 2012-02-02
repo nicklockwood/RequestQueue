@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.1
+//  Version 1.1.1
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -256,7 +256,7 @@
     {
         if (connection.accumulatedData == nil)
         {
-            connection.accumulatedData = [NSMutableData dataWithCapacity:connection.responseReceived.expectedContentLength];
+            connection.accumulatedData = [NSMutableData dataWithCapacity:MAX(0, connection.responseReceived.expectedContentLength)];
         }
         [connection.accumulatedData appendData:data];
     }
