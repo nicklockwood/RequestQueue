@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.1.1
+//  Version 1.2 beta
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -66,7 +66,8 @@
 #import <Foundation/Foundation.h>
 
 
-typedef void (^ConnectionCompletionHandler)(NSURLResponse *response, NSData *data, NSError *error);
+typedef void (^RequestCompletionHandler)(NSURLResponse *response, NSData *data, NSError *error);
+typedef void (^RequestProgressHandler)(float progress, NSInteger bytesTransferred, NSInteger totalBytes);
 
 
 typedef enum
@@ -77,9 +78,22 @@ typedef enum
 RequestQueueMode;
 
 
+@interface RequestOperation : NSOperation
+
+@property (nonatomic, strong, readonly) NSURLRequest *request;
+@property (nonatomic, copy) RequestCompletionHandler completionHandler;
+@property (nonatomic, copy) RequestProgressHandler uploadProgressHandler;
+@property (nonatomic, copy) RequestProgressHandler downloadProgressHandler;
+
++ (RequestOperation *)operationWithRequest:(NSURLRequest *)request;
+- (RequestOperation *)initWithRequest:(NSURLRequest *)request;
+
+@end
+
+
 @interface RequestQueue : NSObject
 
-@property (nonatomic, assign) NSUInteger maxConcurrentConnectionCount;
+@property (nonatomic, assign) NSUInteger maxConcurrentRequestCount;
 @property (nonatomic, assign, getter = isSuspended) BOOL suspended;
 @property (nonatomic, assign, readonly) NSUInteger requestCount;
 @property (nonatomic, strong, readonly) NSArray *requests;
@@ -87,7 +101,8 @@ RequestQueueMode;
 
 + (RequestQueue *)mainQueue;
 
-- (void)addRequest:(NSURLRequest *)request completionHandler:(ConnectionCompletionHandler)completionHandler;
+- (void)addRequestOperation:(RequestOperation *)operation;
+- (void)addRequest:(NSURLRequest *)request completionHandler:(RequestCompletionHandler)completionHandler;
 - (void)cancelRequest:(NSURLRequest *)request;
 - (void)cancelAllRequests;
 

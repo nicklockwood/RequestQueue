@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.1.1
+//  Version 1.2 beta
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -33,56 +33,153 @@
 #import "RequestQueue.h"
 
 
-@interface RequestQueueConnection : NSURLConnection
+@interface RequestOperation () <NSURLConnectionDataDelegate>
 
-@property (nonatomic, strong, readonly) NSURLRequest *originalRequest;
+@property (nonatomic, strong) NSURLConnection *connection;
 @property (nonatomic, strong) NSURLResponse *responseReceived;
 @property (nonatomic, strong) NSMutableData *accumulatedData;
-@property (nonatomic, copy) ConnectionCompletionHandler completionHandler;
-@property (nonatomic, assign, readonly, getter = isStarted) BOOL started;
+@property (assign, getter = isExecuting) BOOL executing;
+@property (assign, getter = isFinished) BOOL finished;
+@property (assign, getter = isCancelled) BOOL cancelled;
 
 @end
 
 
-@implementation RequestQueueConnection
+@implementation RequestOperation
 
-@synthesize originalRequest;
+@synthesize request;
+@synthesize connection;
 @synthesize responseReceived;
 @synthesize accumulatedData;
+@synthesize executing;
+@synthesize finished;
+@synthesize cancelled;
 @synthesize completionHandler;
-@synthesize started;
+@synthesize uploadProgressHandler;
+@synthesize downloadProgressHandler;
 
-- (id)initWithRequest:(NSURLRequest *)request delegate:(id)delegate startImmediately:(BOOL)startImmediately
++ (RequestOperation *)operationWithRequest:(NSURLRequest *)request
 {
-    if ((self = [super initWithRequest:request delegate:delegate startImmediately:startImmediately]))
+    return AH_AUTORELEASE([[self alloc] initWithRequest:request]);
+}
+
+- (RequestOperation *)initWithRequest:(NSURLRequest *)_request
+{
+    if ((self = [self init]))
     {
-        originalRequest = AH_RETAIN(request);
+        request = AH_RETAIN(_request);
+        connection = [[NSURLConnection alloc] initWithRequest:request delegate:self startImmediately:NO];
     }
     return self;
 }
 
+- (BOOL)isConcurrent
+{
+    return YES;
+}
+
 - (void)start
 {
-    started = YES;
-    [super start];
+    @synchronized (self)
+    {
+        if (!executing)
+        {
+            [self willChangeValueForKey:@"isExecuting"];
+            executing = YES;
+            [connection start];
+            [self didChangeValueForKey:@"isExecuting"];
+        }
+    }
 }
 
 - (void)cancel
 {
-    if (completionHandler)
+    @synchronized (self)
     {
-        completionHandler(nil, nil, [NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorCancelled userInfo:nil]);
+        if (!cancelled)
+        {
+            [self willChangeValueForKey:@"isCancelled"];
+            cancelled = YES;
+            [connection cancel];
+			[self didChangeValueForKey:@"isCancelled"];
+			
+			//call callback
+            NSError *error = [NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorCancelled userInfo:nil];
+            [self connection:connection didFailWithError:error];
+        }
     }
-    [super cancel];
+}
+
+- (void)finish
+{
+    @synchronized (self)
+    {
+        if (!finished)
+        {
+            [self willChangeValueForKey:@"isExecuting"];
+            [self willChangeValueForKey:@"isFinished"];
+            executing = NO;
+            finished = YES;
+            [self didChangeValueForKey:@"isFinished"];
+            [self didChangeValueForKey:@"isExecuting"];
+        }
+    }
 }
 
 - (void)dealloc
 {
-    AH_RELEASE(originalRequest);
+    AH_RELEASE(request);
+    AH_RELEASE(connection);
     AH_RELEASE(responseReceived);
     AH_RELEASE(accumulatedData);
     AH_RELEASE(completionHandler);
+    AH_RELEASE(uploadProgressHandler);
+    AH_RELEASE(downloadProgressHandler);
     AH_SUPER_DEALLOC;
+}
+
+#pragma mark NSURLConnectionDelegate
+
+- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
+{
+    [self finish];
+	if (completionHandler) completionHandler(responseReceived, accumulatedData, error);
+}
+
+- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response
+{
+    self.responseReceived = response;
+}
+
+- (void)connection:(NSURLConnection *)connection didSendBodyData:(NSInteger)bytesWritten totalBytesWritten:(NSInteger)bytesTransferred totalBytesExpectedToWrite:(NSInteger)totalBytes
+{
+    if (uploadProgressHandler)
+    {
+        float progress = fmaxf(0.0f, fminf(1.0f, (float)bytesTransferred / (float)totalBytes));
+        uploadProgressHandler(progress, bytesTransferred, totalBytes);
+    }
+}
+
+- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data
+{
+    if (accumulatedData == nil)
+    {
+        accumulatedData = [[NSMutableData alloc] initWithCapacity:MAX(0, responseReceived.expectedContentLength)];
+    }
+    [accumulatedData appendData:data];
+    if (downloadProgressHandler)
+    {
+        NSInteger bytesTransferred = [accumulatedData length];
+        NSInteger totalBytes = MAX(0, responseReceived.expectedContentLength);
+		float progress = fmaxf(0.0f, fminf(1.0f, (float)bytesTransferred / (float)totalBytes));
+        downloadProgressHandler(progress, bytesTransferred, totalBytes);
+    }
+}
+
+- (void)connectionDidFinishLoading:(NSURLConnection *)_connection
+{
+	[self finish];
+    if (completionHandler) completionHandler(responseReceived, accumulatedData, nil);
 }
 
 @end
@@ -90,16 +187,16 @@
 
 @interface RequestQueue () <NSURLConnectionDataDelegate>
 
-@property (nonatomic, strong) NSMutableArray *connections;
+@property (nonatomic, strong) NSMutableArray *operations;
 
 @end
 
 
 @implementation RequestQueue
 
-@synthesize maxConcurrentConnectionCount;
+@synthesize maxConcurrentRequestCount;
 @synthesize suspended;
-@synthesize connections;
+@synthesize operations;
 @synthesize queueMode;
 
 + (RequestQueue *)mainQueue
@@ -117,47 +214,36 @@
     if ((self = [super init]))
     {
         queueMode = RequestQueueModeFirstInFirstOut;
-        connections = [[NSMutableArray alloc] init];
-        maxConcurrentConnectionCount = 2;
+        operations = [[NSMutableArray alloc] init];
+        maxConcurrentRequestCount = 2;
     }
     return self;
 }
 
 - (void)dealloc
 {
-    AH_RELEASE(connections);
+    AH_RELEASE(operations);
     AH_SUPER_DEALLOC;
 }
 
 - (NSUInteger)requestCount
 {
-    return [connections count];
+    return [operations count];
 }
 
 - (NSArray *)requests
 {
-    return [connections valueForKeyPath:@"originalRequest"];
+    return [operations valueForKeyPath:@"request"];
 }
 
-- (void)dequeueConnections
+- (void)dequeueOperations
 {
     if (!suspended)
     {
-        NSInteger count = maxConcurrentConnectionCount ?: INT_MAX;
-        for (RequestQueueConnection *connection in connections)
+        NSInteger count = MIN([operations count], maxConcurrentRequestCount ?: INT_MAX);
+        for (int i = 0; i < count; i++)
         {
-            if (count == 0)
-            {
-                break;
-            }
-            else
-            {
-                if (![connection isStarted])
-                {
-                    [connection start];
-                }
-                count --;
-            }
+			[(RequestOperation *)[operations objectAtIndex:i] start];
         }
     }
 }
@@ -167,111 +253,76 @@
 - (void)setSuspended:(BOOL)_suspended
 {
     suspended = _suspended;
-    if (!suspended)
-    {
-        [self dequeueConnections];
-    }
+    [self dequeueOperations];
 }
 
-- (void)addRequest:(NSURLRequest *)request completionHandler:(ConnectionCompletionHandler)completionHandler
+- (void)addRequestOperation:(RequestOperation *)operation
 {
-    RequestQueueConnection *connection = [[RequestQueueConnection alloc] initWithRequest:request delegate:self startImmediately:NO];
-    connection.completionHandler = completionHandler;
-    NSInteger index = 0;
+	NSInteger index = 0;
     if (queueMode == RequestQueueModeFirstInFirstOut)
     {
-        index = [connections count];
+        index = [operations count];
     }
     else
     {
-        for (index = 0; index < [connections count]; index++)
+        for (index = 0; index < [operations count]; index++)
         {
-            if (![[connections objectAtIndex:index] isStarted])
+            if (![[operations objectAtIndex:index] isExecuting])
             {
                 break;
             }
         }
     }
-    if (index < [connections count])
+    if (index < [operations count])
     {
-        [connections insertObject:connection atIndex:index];
+        [operations insertObject:operation atIndex:index];
     }
     else
     {
-        [connections addObject:connection];
+        [operations addObject:operation];
     }
-    AH_RELEASE(connection);
-    [self dequeueConnections];
+    
+    [operation addObserver:self forKeyPath:@"isExecuting" options:NSKeyValueChangeSetting context:NULL];
+    [self dequeueOperations];
+}
+
+- (void)addRequest:(NSURLRequest *)request completionHandler:(RequestCompletionHandler)completionHandler
+{
+    RequestOperation *operation = [RequestOperation operationWithRequest:request];
+    operation.completionHandler = completionHandler;
+    [self addRequestOperation:operation];
 }
 
 - (void)cancelRequest:(NSURLRequest *)request
 {
-    for (int i = [connections count] - 1; i >= 0 ; i--)
+    for (int i = [operations count] - 1; i >= 0 ; i--)
     {
-        RequestQueueConnection *connection = AH_AUTORELEASE(AH_RETAIN([connections objectAtIndex:i]));
-        if (connection.originalRequest == request)
+        RequestOperation *operation = AH_AUTORELEASE(AH_RETAIN([operations objectAtIndex:i]));
+        if (operation.request == request)
         {
-            [connections removeObjectAtIndex:i];
-            [connection cancel];
+            [operation cancel];
         }
     }
 }
 
 - (void)cancelAllRequests
 {
-    NSArray *connectionsCopy = AH_AUTORELEASE(AH_RETAIN(connections));
-    self.connections = [NSMutableArray array];
-    for (RequestQueueConnection *connection in connectionsCopy)
+    NSArray *operationsCopy = AH_AUTORELEASE(AH_RETAIN(operations));
+    self.operations = [NSMutableArray array];
+    for (RequestOperation *operation in operationsCopy)
     {
-        [connection cancel];
+        [operation cancel];
     }
 }
 
-#pragma mark NSURLConnectionDelegate
-
-- (void)connection:(RequestQueueConnection *)connection didFailWithError:(NSError *)error
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
-    if ([connections containsObject:connection])
+    RequestOperation *operation = object;
+    if (!operation.executing)
     {
-        [connections removeObject:AH_AUTORELEASE(AH_RETAIN(connection))];
-        if (connection.completionHandler)
-        {
-            connection.completionHandler(connection.responseReceived, connection.accumulatedData, error);
-        }
-        [self dequeueConnections];
-    }
-}
-
-- (void)connection:(RequestQueueConnection *)connection didReceiveResponse:(NSURLResponse *)response
-{
-    if ([connections containsObject:connection])
-    {
-        connection.responseReceived = response;
-    }
-}
-
-- (void)connection:(RequestQueueConnection *)connection didReceiveData:(NSData *)data
-{
-    if ([connections containsObject:connection])
-    {
-        if (connection.accumulatedData == nil)
-        {
-            connection.accumulatedData = [NSMutableData dataWithCapacity:MAX(0, connection.responseReceived.expectedContentLength)];
-        }
-        [connection.accumulatedData appendData:data];
-    }
-}
-
-- (void)connectionDidFinishLoading:(RequestQueueConnection *)connection
-{
-    if ([connections containsObject:connection])
-    {
-        [connections removeObject:AH_AUTORELEASE(AH_RETAIN(connection))];
-        if (connection.completionHandler)
-        {
-            connection.completionHandler(connection.responseReceived, connection.accumulatedData, nil);
-        }
-        [self dequeueConnections];
+        [operation removeObserver:self forKeyPath:@"isExecuting"];
+        [operations removeObject:operation];
+        [self dequeueOperations];
     }
 }
 

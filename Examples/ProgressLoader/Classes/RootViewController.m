@@ -14,6 +14,7 @@
 
 @property (nonatomic, retain) NSMutableArray *urlStrings;
 @property (nonatomic, retain) NSMutableDictionary *images;
+@property (nonatomic, retain) NSMutableDictionary *progressStatuses;
 
 @end
 
@@ -23,6 +24,7 @@
 @synthesize loadUnloadButton;
 @synthesize urlStrings;
 @synthesize images;
+@synthesize progressStatuses;
 
 #pragma mark View lifecycle
 
@@ -41,7 +43,7 @@
 
 - (void)refreshView
 {	
-	//reload table data
+	//refresh table
 	[self.tableView reloadData];
 	
 	//update button state
@@ -73,6 +75,7 @@
 		//clear images
 		self.urlStrings = nil;
 		self.images = nil;
+		self.progressStatuses = nil;
 		
 		//refresh view
 		[self refreshView];
@@ -83,15 +86,20 @@
 		NSString *path = [[NSBundle mainBundle] pathForResource:@"Images" ofType:@"plist"];
 		self.urlStrings = [NSMutableArray arrayWithContentsOfFile:path];
 		self.images = [NSMutableDictionary dictionary];
+		self.progressStatuses = [NSMutableDictionary dictionary];
 		[self refreshView];
 		
 		//load images
 		for (NSString *urlString in urlStrings)
 		{
+			//create operation
 			NSURL *URL = [NSURL URLWithString:urlString];
 			NSURLCacheStoragePolicy policy = NSURLCacheStorageNotAllowed;
 			NSURLRequest *request = [NSURLRequest requestWithURL:URL cachePolicy:policy timeoutInterval:15.0];
-			[[RequestQueue mainQueue] addRequest:request completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
+			RequestOperation *operation = [RequestOperation operationWithRequest:request];
+
+			//completion handler
+			operation.completionHandler = ^(NSURLResponse *response, NSData *data, NSError *error) {
 				
 				if (!error)
 				{
@@ -108,7 +116,20 @@
 				
 				//refresh view
 				[self refreshView];
-			}];
+			};
+			
+			//progress handler
+			operation.downloadProgressHandler = ^(float progress, NSInteger bytesTransferred, NSInteger totalBytes) {
+				
+				//update progress
+				[progressStatuses setObject:[NSNumber numberWithFloat:progress] forKey:urlString];
+				
+				//refresh view
+				[self refreshView];
+			};
+			
+			//add operation to queue
+			[[RequestQueue mainQueue] addRequestOperation:operation];
 		}
 
 	}
@@ -129,12 +150,18 @@
     if (cell == nil)
 	{
         cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier] autorelease];
+		
+		UIProgressView *progressView = [[UIProgressView alloc] initWithProgressViewStyle:UIProgressViewStyleBar];
+		progressView.frame = CGRectMake(80.0f, 16.0f, 220.0f, progressView.frame.size.height);
+		progressView.tag = 99;
+		[cell addSubview:progressView];
 	}
     
 	NSString *urlString = [urlStrings objectAtIndex:indexPath.row];
 	cell.imageView.image = [images objectForKey:urlString];
-	cell.textLabel.text = [urlString lastPathComponent];
-
+	UIProgressView *progressView = (UIProgressView *)[cell viewWithTag:99];
+	progressView.progress = [[progressStatuses objectForKey:urlString] floatValue];
+	
     return cell;
 }
 

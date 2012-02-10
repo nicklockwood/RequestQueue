@@ -1,8 +1,8 @@
 RequestQueue
 
-Version 1.1.1, February 2nd, 2012
+Version 12, February 10th, 2012
 
-Copyright (C) 2011 Charcoal Design
+Copyright (C) 2012 Charcoal Design
 
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages
