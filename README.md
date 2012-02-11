@@ -11,7 +11,7 @@ Supported OS & SDK Versions
 * Earliest supported deployment target - iOS 4.3 / Mac OS 10.6
 * Earliest compatible deployment target - iOS 4.0 / Mac OS 10.6
 
-NOTE: 'Supported' means that the library has been tested with this version. 'Compatible' means that the library should work on this iOS version (i.e. it doesn't rely on any unavailable SDK features) but is no longer being tested for compatibility and may require tweaking or bug fixes to run correctly.
+NOTE: 'Supported' means that the library has been tested with this version. 'Compatible' means that the library should work on this OS version (i.e. it doesn't rely on any unavailable SDK features) but is no longer being tested for compatibility and may require tweaking or bug fixes to run correctly.
 
 
 ARC Compatibility
@@ -65,8 +65,8 @@ This is a block that will be called periodically as data is downloaded by the NS
 RequestOperation Methods
 ----------------------------
 
-+ (RequestOperation *)operationWithRequest:(NSURLRequest *)request;
-- (RequestOperation *)initWithRequest:(NSURLRequest *)request;
+    + (RequestOperation *)operationWithRequest:(NSURLRequest *)request;
+    - (RequestOperation *)initWithRequest:(NSURLRequest *)request;
 
 These methods are used to create a new request operation. RequestOperations are single-use, meaning that the request cannot be changed after the operation is created, and the operation can only be used to send a single instance of the request, after which is should be discarded.
 
