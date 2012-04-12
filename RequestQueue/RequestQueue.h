@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.2 beta
+//  Version 1.3
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -33,12 +33,12 @@
 //
 //  ARC Helper
 //
-//  Version 1.2
+//  Version 1.2.2
 //
 //  Created by Nick Lockwood on 05/01/2012.
-//  Charcoal Design Charcoal Design
+//  Copyright 2012 Charcoal Design
 //
-//  Distributed under the permissive zlib License
+//  Distributed under the permissive zlib license
 //  Get the latest version from here:
 //
 //  https://gist.github.com/1563325
@@ -46,16 +46,16 @@
 
 #ifndef AH_RETAIN
 #if __has_feature(objc_arc)
-#define AH_RETAIN(x) x
-#define AH_RELEASE(x)
-#define AH_AUTORELEASE(x) x
-#define AH_SUPER_DEALLOC
+#define AH_RETAIN(x) (x)
+#define AH_RELEASE(x) (void)(x)
+#define AH_AUTORELEASE(x) (x)
+#define AH_SUPER_DEALLOC (void)(0)
 #else
 #define __AH_WEAK
 #define AH_WEAK assign
-#define AH_RETAIN(x) [x retain]
-#define AH_RELEASE(x) [x release]
-#define AH_AUTORELEASE(x) [x autorelease]
+#define AH_RETAIN(x) [(x) retain]
+#define AH_RELEASE(x) [(x) release]
+#define AH_AUTORELEASE(x) [(x) autorelease]
 #define AH_SUPER_DEALLOC [super dealloc]
 #endif
 #endif
@@ -84,6 +84,8 @@ RequestQueueMode;
 @property (nonatomic, copy) RequestCompletionHandler completionHandler;
 @property (nonatomic, copy) RequestProgressHandler uploadProgressHandler;
 @property (nonatomic, copy) RequestProgressHandler downloadProgressHandler;
+@property (nonatomic, copy) NSSet *autoRetryErrorCodes;
+@property (nonatomic, assign) BOOL autoRetry;
 
 + (RequestOperation *)operationWithRequest:(NSURLRequest *)request;
 - (RequestOperation *)initWithRequest:(NSURLRequest *)request;
@@ -98,6 +100,7 @@ RequestQueueMode;
 @property (nonatomic, assign, readonly) NSUInteger requestCount;
 @property (nonatomic, strong, readonly) NSArray *requests;
 @property (nonatomic, assign) RequestQueueMode queueMode;
+@property (nonatomic, assign) BOOL allowDuplicateRequests;
 
 + (RequestQueue *)mainQueue;
 

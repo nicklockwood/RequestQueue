@@ -61,6 +61,14 @@ This is a block that will be called periodically as upload data is sent by the N
     
 This is a block that will be called periodically as data is downloaded by the NSURLConnection. This is mainly useful when downloading large files from a server where you would wish to display a progress bar. For details of the callback parameters, check the Callbacks section below.
 
+    @property (nonatomic, copy) NSSet *autoRetryErrorCodes;
+    
+A set of error codes to compare against when deciding if the request should automatically retry or not. By default this set includes any NSURLError types that relate to poor or unavailable connections. This means that the operation will retry if the Internet is down or the connection times out, but won't retry if the UL is malformed or the resource doesn't exist (which would be pointless). You can customise this set to meet the specific needs of your application if required.
+
+    @property (nonatomic, assign) BOOL autoRetry;
+    
+If set to `YES`, the operation will automatically retry if there is a connection failure instead of terminating and calling the completionHandler. The operation will compare the error code against the autoRetryErrorCodes set, and will only retry if the code is in that set. Defaults to `NO`.
+    
 
 RequestOperation Methods
 ----------------------------
@@ -93,6 +101,10 @@ The requests in the queue. This includes both active requests and pending reques
     @property (nonatomic, assign) RequestQueueMode queueMode;
     
 The queueMode property controls whether new request are added at the front or the back of the queue. The default value of `RequestQueueModeFirstInFirstOut` puts new requests at the back of the queue and the `RequestQueueModeLastInFirstOut` value puts them at the front. Last-in-first-out means that the more recent request is given priority. Requests that are already active will still finish first, but if a large backlog of requests builds up in the queue, newer requests will not be forced to wait until the backlog is cleared before they are dealt with.
+
+    @property (nonatomic, assign) BOOL allowDuplicateRequests;
+
+This property controls whether the request queue allows multiple identical requests to be queued. If set to `NO` (the default), adding a duplicate request (i.e. a request with identical parameters to another request already in the queue) will result in the previously added request being cancelled. The completion handler for the cancelled request will be called with the NSURLErrorCancelled error as normal.
 
 
 RequestQueue Methods

@@ -1,3 +1,9 @@
+Version 1.3
+
+- Added `autoRetry` property to RequestOperation class
+- Added `allowDuplicateRequests` property to RequestQueue class
+- If a duplicate request is added to the queue, the previous duplicate is now cancelled by default
+
 Version 1.2
 
 - Major internal rewrite using NSOperations

@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.2 beta
+//  Version 1.3
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -57,6 +57,8 @@
 @synthesize completionHandler;
 @synthesize uploadProgressHandler;
 @synthesize downloadProgressHandler;
+@synthesize autoRetryErrorCodes;
+@synthesize autoRetry;
 
 + (RequestOperation *)operationWithRequest:(NSURLRequest *)request
 {
@@ -101,9 +103,9 @@
             [self willChangeValueForKey:@"isCancelled"];
             cancelled = YES;
             [connection cancel];
-			[self didChangeValueForKey:@"isCancelled"];
-			
-			//call callback
+            [self didChangeValueForKey:@"isCancelled"];
+            
+            //call callback
             NSError *error = [NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorCancelled userInfo:nil];
             [self connection:connection didFailWithError:error];
         }
@@ -126,6 +128,27 @@
     }
 }
 
+- (NSSet *)autoRetryErrorCodes
+{
+    if (!autoRetryErrorCodes)
+    {
+        static NSSet *codes = nil;
+        if (!codes)
+        {
+            codes = [NSSet setWithObjects:
+                     [NSNumber numberWithInt:NSURLErrorTimedOut],
+                     [NSNumber numberWithInt:NSURLErrorCannotFindHost],
+                     [NSNumber numberWithInt:NSURLErrorCannotConnectToHost],
+                     [NSNumber numberWithInt:NSURLErrorDNSLookupFailed],
+                     [NSNumber numberWithInt:NSURLErrorNotConnectedToInternet],
+                     [NSNumber numberWithInt:NSURLErrorNetworkConnectionLost],
+                     nil];
+        }
+        return codes;
+    }
+    return autoRetryErrorCodes;
+}
+
 - (void)dealloc
 {
     AH_RELEASE(request);
@@ -135,6 +158,7 @@
     AH_RELEASE(completionHandler);
     AH_RELEASE(uploadProgressHandler);
     AH_RELEASE(downloadProgressHandler);
+    AH_RELEASE(autoRetryErrorCodes);
     AH_SUPER_DEALLOC;
 }
 
@@ -142,8 +166,16 @@
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
 {
-    [self finish];
-	if (completionHandler) completionHandler(responseReceived, accumulatedData, error);
+    if (autoRetry && [self.autoRetryErrorCodes containsObject:[NSNumber numberWithInt:error.code]])
+    {
+        self.connection = AH_AUTORELEASE([[NSURLConnection alloc] initWithRequest:request delegate:self startImmediately:NO]);
+        [self.connection performSelector:@selector(start) withObject:nil afterDelay:1.0];
+    }
+    else
+    {
+        [self finish];
+        if (completionHandler) completionHandler(responseReceived, accumulatedData, error);
+    }
 }
 
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response
@@ -151,12 +183,12 @@
     self.responseReceived = response;
 }
 
-- (void)connection:(NSURLConnection *)connection didSendBodyData:(NSInteger)bytesWritten totalBytesWritten:(NSInteger)bytesTransferred totalBytesExpectedToWrite:(NSInteger)totalBytes
+- (void)connection:(NSURLConnection *)connection didSendBodyData:(NSInteger)bytesWritten totalBytesWritten:(NSInteger)totalBytesWritten totalBytesExpectedToWrite:(NSInteger)totalBytesExpectedToWrite
 {
     if (uploadProgressHandler)
     {
-        float progress = fmaxf(0.0f, fminf(1.0f, (float)bytesTransferred / (float)totalBytes));
-        uploadProgressHandler(progress, bytesTransferred, totalBytes);
+        float progress = (float)totalBytesWritten / (float)totalBytesExpectedToWrite;
+        uploadProgressHandler(progress, totalBytesWritten, totalBytesExpectedToWrite);
     }
 }
 
@@ -171,14 +203,13 @@
     {
         NSInteger bytesTransferred = [accumulatedData length];
         NSInteger totalBytes = MAX(0, responseReceived.expectedContentLength);
-		float progress = fmaxf(0.0f, fminf(1.0f, (float)bytesTransferred / (float)totalBytes));
-        downloadProgressHandler(progress, bytesTransferred, totalBytes);
+        downloadProgressHandler((float)bytesTransferred / (float)totalBytes, bytesTransferred, totalBytes);
     }
 }
 
 - (void)connectionDidFinishLoading:(NSURLConnection *)_connection
 {
-	[self finish];
+    [self finish];
     if (completionHandler) completionHandler(responseReceived, accumulatedData, nil);
 }
 
@@ -198,6 +229,7 @@
 @synthesize suspended;
 @synthesize operations;
 @synthesize queueMode;
+@synthesize allowDuplicateRequests;
 
 + (RequestQueue *)mainQueue
 {
@@ -216,6 +248,7 @@
         queueMode = RequestQueueModeFirstInFirstOut;
         operations = [[NSMutableArray alloc] init];
         maxConcurrentRequestCount = 2;
+        allowDuplicateRequests = NO;
     }
     return self;
 }
@@ -243,7 +276,7 @@
         NSInteger count = MIN([operations count], maxConcurrentRequestCount ?: INT_MAX);
         for (int i = 0; i < count; i++)
         {
-			[(RequestOperation *)[operations objectAtIndex:i] start];
+            [(RequestOperation *)[operations objectAtIndex:i] start];
         }
     }
 }
@@ -258,7 +291,19 @@
 
 - (void)addRequestOperation:(RequestOperation *)operation
 {
-	NSInteger index = 0;
+    if (!allowDuplicateRequests)
+    {
+        for (int i = [operations count] - 1; i >= 0 ; i--)
+        {
+            RequestOperation *_operation = AH_AUTORELEASE(AH_RETAIN([operations objectAtIndex:i]));
+            if ([_operation.request isEqual:operation.request])
+            {
+                [_operation cancel];
+            }
+        }
+    }
+    
+    NSInteger index = 0;
     if (queueMode == RequestQueueModeFirstInFirstOut)
     {
         index = [operations count];
