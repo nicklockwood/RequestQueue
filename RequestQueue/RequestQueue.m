@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.3
+//  Version 1.4
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -33,7 +33,10 @@
 #import "RequestQueue.h"
 
 
-@interface RequestOperation () <NSURLConnectionDataDelegate>
+NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
+
+
+@interface RQOperation () <NSURLConnectionDataDelegate>
 
 @property (nonatomic, strong) NSURLConnection *connection;
 @property (nonatomic, strong) NSURLResponse *responseReceived;
@@ -45,7 +48,7 @@
 @end
 
 
-@implementation RequestOperation
+@implementation RQOperation
 
 @synthesize request;
 @synthesize connection;
@@ -57,15 +60,16 @@
 @synthesize completionHandler;
 @synthesize uploadProgressHandler;
 @synthesize downloadProgressHandler;
+@synthesize authenticationChallengeHandler;
 @synthesize autoRetryErrorCodes;
 @synthesize autoRetry;
 
-+ (RequestOperation *)operationWithRequest:(NSURLRequest *)request
++ (RQOperation *)operationWithRequest:(NSURLRequest *)request
 {
     return AH_AUTORELEASE([[self alloc] initWithRequest:request]);
 }
 
-- (RequestOperation *)initWithRequest:(NSURLRequest *)_request
+- (RQOperation *)initWithRequest:(NSURLRequest *)_request
 {
     if ((self = [self init]))
     {
@@ -158,6 +162,7 @@
     AH_RELEASE(completionHandler);
     AH_RELEASE(uploadProgressHandler);
     AH_RELEASE(downloadProgressHandler);
+    AH_RELEASE(authenticationChallengeHandler);
     AH_RELEASE(autoRetryErrorCodes);
     AH_SUPER_DEALLOC;
 }
@@ -175,6 +180,18 @@
     {
         [self finish];
         if (completionHandler) completionHandler(responseReceived, accumulatedData, error);
+    }
+}
+
+- (void)connection:(NSURLConnection *)_connection didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
+{
+    if (authenticationChallengeHandler)
+    {
+        authenticationChallengeHandler(challenge);
+    }
+    else
+    {
+        [challenge.sender continueWithoutCredentialForAuthenticationChallenge:challenge];
     }
 }
 
@@ -210,7 +227,23 @@
 - (void)connectionDidFinishLoading:(NSURLConnection *)_connection
 {
     [self finish];
-    if (completionHandler) completionHandler(responseReceived, accumulatedData, nil);
+    
+    NSError *error = nil;
+    if ([responseReceived respondsToSelector:@selector(statusCode)])
+    {
+        //treat status codes >= 400 as an error
+        NSInteger statusCode = [(NSHTTPURLResponse *)responseReceived statusCode];
+        if (statusCode / 100 >= 4)
+        {
+            NSString *message = [NSString stringWithFormat:NSLocalizedString(@"The server returned a %i error", @"RequestQueue HTTPResponse error message format"), statusCode];
+            NSDictionary *infoDict = [NSDictionary dictionaryWithObject:message forKey:NSLocalizedDescriptionKey];
+            error = [NSError errorWithDomain:HTTPResponseErrorDomain
+                                        code:statusCode
+                                    userInfo:infoDict];
+        }
+    }
+    
+    if (completionHandler) completionHandler(responseReceived, accumulatedData, error);
 }
 
 @end
@@ -276,7 +309,7 @@
         NSInteger count = MIN([operations count], maxConcurrentRequestCount ?: INT_MAX);
         for (int i = 0; i < count; i++)
         {
-            [(RequestOperation *)[operations objectAtIndex:i] start];
+            [(RQOperation *)[operations objectAtIndex:i] start];
         }
     }
 }
@@ -289,13 +322,13 @@
     [self dequeueOperations];
 }
 
-- (void)addRequestOperation:(RequestOperation *)operation
+- (void)addOperation:(RQOperation *)operation
 {
     if (!allowDuplicateRequests)
     {
         for (int i = [operations count] - 1; i >= 0 ; i--)
         {
-            RequestOperation *_operation = AH_AUTORELEASE(AH_RETAIN([operations objectAtIndex:i]));
+            RQOperation *_operation = AH_AUTORELEASE(AH_RETAIN([operations objectAtIndex:i]));
             if ([_operation.request isEqual:operation.request])
             {
                 [_operation cancel];
@@ -331,18 +364,18 @@
     [self dequeueOperations];
 }
 
-- (void)addRequest:(NSURLRequest *)request completionHandler:(RequestCompletionHandler)completionHandler
+- (void)addRequest:(NSURLRequest *)request completionHandler:(RQCompletionHandler)completionHandler
 {
-    RequestOperation *operation = [RequestOperation operationWithRequest:request];
+    RQOperation *operation = [RQOperation operationWithRequest:request];
     operation.completionHandler = completionHandler;
-    [self addRequestOperation:operation];
+    [self addOperation:operation];
 }
 
 - (void)cancelRequest:(NSURLRequest *)request
 {
     for (int i = [operations count] - 1; i >= 0 ; i--)
     {
-        RequestOperation *operation = AH_AUTORELEASE(AH_RETAIN([operations objectAtIndex:i]));
+        RQOperation *operation = AH_AUTORELEASE(AH_RETAIN([operations objectAtIndex:i]));
         if (operation.request == request)
         {
             [operation cancel];
@@ -354,7 +387,7 @@
 {
     NSArray *operationsCopy = AH_AUTORELEASE(AH_RETAIN(operations));
     self.operations = [NSMutableArray array];
-    for (RequestOperation *operation in operationsCopy)
+    for (RQOperation *operation in operationsCopy)
     {
         [operation cancel];
     }
@@ -362,7 +395,7 @@
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
-    RequestOperation *operation = object;
+    RQOperation *operation = object;
     if (!operation.executing)
     {
         [operation removeObserver:self forKeyPath:@"isExecuting"];

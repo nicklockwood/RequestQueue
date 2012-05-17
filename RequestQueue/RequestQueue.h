@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.3
+//  Version 1.4
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -66,8 +66,12 @@
 #import <Foundation/Foundation.h>
 
 
-typedef void (^RequestCompletionHandler)(NSURLResponse *response, NSData *data, NSError *error);
-typedef void (^RequestProgressHandler)(float progress, NSInteger bytesTransferred, NSInteger totalBytes);
+extern NSString *const HTTPResponseErrorDomain;
+
+
+typedef void (^RQCompletionHandler)(NSURLResponse *response, NSData *data, NSError *error);
+typedef void (^RQProgressHandler)(float progress, NSInteger bytesTransferred, NSInteger totalBytes);
+typedef void (^RQAuthenticationChallengeHandler)(NSURLAuthenticationChallenge *challenge);
 
 
 typedef enum
@@ -78,17 +82,18 @@ typedef enum
 RequestQueueMode;
 
 
-@interface RequestOperation : NSOperation
+@interface RQOperation : NSOperation
 
 @property (nonatomic, strong, readonly) NSURLRequest *request;
-@property (nonatomic, copy) RequestCompletionHandler completionHandler;
-@property (nonatomic, copy) RequestProgressHandler uploadProgressHandler;
-@property (nonatomic, copy) RequestProgressHandler downloadProgressHandler;
+@property (nonatomic, copy) RQCompletionHandler completionHandler;
+@property (nonatomic, copy) RQProgressHandler uploadProgressHandler;
+@property (nonatomic, copy) RQProgressHandler downloadProgressHandler;
+@property (nonatomic, copy) RQAuthenticationChallengeHandler authenticationChallengeHandler;
 @property (nonatomic, copy) NSSet *autoRetryErrorCodes;
 @property (nonatomic, assign) BOOL autoRetry;
 
-+ (RequestOperation *)operationWithRequest:(NSURLRequest *)request;
-- (RequestOperation *)initWithRequest:(NSURLRequest *)request;
++ (RQOperation *)operationWithRequest:(NSURLRequest *)request;
+- (RQOperation *)initWithRequest:(NSURLRequest *)request;
 
 @end
 
@@ -104,8 +109,8 @@ RequestQueueMode;
 
 + (RequestQueue *)mainQueue;
 
-- (void)addRequestOperation:(RequestOperation *)operation;
-- (void)addRequest:(NSURLRequest *)request completionHandler:(RequestCompletionHandler)completionHandler;
+- (void)addOperation:(RQOperation *)operation;
+- (void)addRequest:(NSURLRequest *)request completionHandler:(RQCompletionHandler)completionHandler;
 - (void)cancelRequest:(NSURLRequest *)request;
 - (void)cancelAllRequests;
 

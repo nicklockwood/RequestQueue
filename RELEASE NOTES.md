@@ -1,3 +1,11 @@
+Version 1.4
+
+- HTTP status codes >= 400 are now treated as errors
+- Added RQAuthenticationChallengeHandler for handling HTTP basic auth
+- Renamed RequestOperation to RQOperation
+- Name-spaced the request handler block function signatures
+- Added BasicAuth example project
+
 Version 1.3
 
 - Added `autoRetry` property to RequestOperation class

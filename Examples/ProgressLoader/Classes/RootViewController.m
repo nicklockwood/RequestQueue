@@ -96,7 +96,7 @@
 			NSURL *URL = [NSURL URLWithString:urlString];
 			NSURLCacheStoragePolicy policy = NSURLCacheStorageNotAllowed;
 			NSURLRequest *request = [NSURLRequest requestWithURL:URL cachePolicy:policy timeoutInterval:15.0];
-			RequestOperation *operation = [RequestOperation operationWithRequest:request];
+			RQOperation *operation = [RQOperation operationWithRequest:request];
 
 			//completion handler
 			operation.completionHandler = ^(NSURLResponse *response, NSData *data, NSError *error) {
@@ -105,7 +105,16 @@
 				{
 					//image downloaded
 					UIImage *image = [UIImage imageWithData:data];
-					[images setObject:image forKey:urlString];
+                    if (image)
+                    {
+                        [images setObject:image forKey:urlString];
+                    }
+                    else
+                    {
+                        //image error
+                        NSInteger index = [urlStrings indexOfObject:urlString];
+                        [urlStrings replaceObjectAtIndex:index withObject:@"Image was missing or corrupt"];
+                    }
 				}
 				else
 				{
@@ -129,7 +138,7 @@
 			};
 			
 			//add operation to queue
-			[[RequestQueue mainQueue] addRequestOperation:operation];
+			[[RequestQueue mainQueue] addOperation:operation];
 		}
 
 	}

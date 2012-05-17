@@ -7,7 +7,7 @@ RequestQueue is a simple class for managing multiple concurrent asynchronous URL
 Supported OS & SDK Versions
 -----------------------------
 
-* Supported build target - iOS 5.0 / Mac OS 10.7 (Xcode 4.2, Apple LLVM compiler 3.0)
+* Supported build target - iOS 5.1 / Mac OS 10.7 (Xcode 4.3.2, Apple LLVM compiler 3.1)
 * Earliest supported deployment target - iOS 4.3 / Mac OS 10.6
 * Earliest compatible deployment target - iOS 4.0 / Mac OS 10.6
 
@@ -23,7 +23,7 @@ RequestQueue makes use of the ARC Helper library to automatically work with both
 Thread Safety
 --------------
 
-You can create RequestOperation and RequestQueue instances on any thread, but the methods of each instance should only be called from a single thread. Additionally, the mainQueue shared instance should only be used on the main thread.
+You can create RQOperation and RequestQueue instances on any thread, but the methods of each instance should only be called from a single thread. Additionally, the mainQueue shared instance should only be used on the main thread.
 
 
 Installation
@@ -35,31 +35,35 @@ To use RequestQueue in an app, just drag the RequestQueue class files into your 
 Classes
 -----------
 
-The RequestQueue library consists of two main classes, the RequestOperation and the RequestQueue itself.
+The RequestQueue library consists of two main classes, the RQOperation and the RequestQueue itself.
 
-The RequestOperation is an NSOperation subclass that wraps a single, asynchronous NSURLConnection. You can use the RequestOperation on its own to make a standalone asynchronous request, or you can add it to any ordinary NSOperationQueue.
+The RQOperation is an NSOperation subclass that wraps a single, asynchronous NSURLConnection. You can use the RQOperation on its own to make a standalone asynchronous request, or you can add it to any ordinary NSOperationQueue.
 
-The RequestQueue simplifies managing a queue of RequestOperations and allows for features that are not possible with an ordinary NSOperationQueue, such as LIFO (Last-In, First-Out) queueing (see below for details).
+The RequestQueue simplifies managing a queue of RQOperations and allows for features that are not possible with an ordinary NSOperationQueue, such as LIFO (Last-In, First-Out) queueing (see below for details).
 
 
-RequestOperation Properties
+RQOperation Properties
 ----------------------------
 
     @property (nonatomic, strong, readonly) NSURLRequest *request;
 
-The original NSURLRequest used to initialise the operation. This is deep-copied by the NSURLConnection, so making changes to this request after creating the RequestOperation will have no effect on the RequestOperation, however it can be useful to retain a reference to it for the purposes of identifying the RequestOperation later on.
+The original NSURLRequest used to initialise the operation. This is deep-copied by the NSURLConnection, so making changes to this request after creating the RQOperation will have no effect on the RQOperation, however it can be useful to retain a reference to it for the purposes of identifying the RQOperation later on.
 
-    @property (nonatomic, copy) RequestCompletionHandler completionHandler;
+    @property (nonatomic, copy) RQCompletionHandler completionHandler;
     
 This is a block that will be called when the request either completes, fails or is cancelled. For details of the callback parameters, check the Callbacks section below.
     
-    @property (nonatomic, copy) RequestProgressHandler uploadProgressHandler;
+    @property (nonatomic, copy) RQProgressHandler uploadProgressHandler;
     
 This is a block that will be called periodically as upload data is sent by the NSURLConnection. This is mainly useful when transmitting large files to a server where you would wish to display a progress bar, and is generally not applicable for most requests. For details of the callback parameters, check the Callbacks section below.
     
-    @property (nonatomic, copy) RequestProgressHandler downloadProgressHandler;
+    @property (nonatomic, copy) RQProgressHandler downloadProgressHandler;
     
 This is a block that will be called periodically as data is downloaded by the NSURLConnection. This is mainly useful when downloading large files from a server where you would wish to display a progress bar. For details of the callback parameters, check the Callbacks section below.
+
+    @property (nonatomic, copy) RQAuthenticationChallengeHandler authenticationChallengeHandler;
+    
+This is a block that will be called in the event of the server returning an authentication challenge.
 
     @property (nonatomic, copy) NSSet *autoRetryErrorCodes;
     
@@ -70,13 +74,13 @@ A set of error codes to compare against when deciding if the request should auto
 If set to `YES`, the operation will automatically retry if there is a connection failure instead of terminating and calling the completionHandler. The operation will compare the error code against the autoRetryErrorCodes set, and will only retry if the code is in that set. Defaults to `NO`.
     
 
-RequestOperation Methods
+RQOperation Methods
 ----------------------------
 
-    + (RequestOperation *)operationWithRequest:(NSURLRequest *)request;
-    - (RequestOperation *)initWithRequest:(NSURLRequest *)request;
+    + (RQOperation *)operationWithRequest:(NSURLRequest *)request;
+    - (RQOperation *)initWithRequest:(NSURLRequest *)request;
 
-These methods are used to create a new request operation. RequestOperations are single-use, meaning that the request cannot be changed after the operation is created, and the operation can only be used to send a single instance of the request, after which is should be discarded.
+These methods are used to create a new request operation. RQOperations are single-use, meaning that the request cannot be changed after the operation is created, and the operation can only be used to send a single instance of the request, after which is should be discarded.
 
 
 RequestQueue Properties
@@ -116,17 +120,17 @@ The RequestQueue class has the following methods:
 	
 This returns a singleton shared instance of the request queue that can be used anywhere in your app (not thread safe, should only be called from the main thread). It is also perfectly acceptable to create your own queue instance for more finely-grained control over concurrency (for example, you could create a low-priority queue instance and a high priority queue so that your app can perform high-priority requests without them getting stuck behind a low priority request, waiting for it to finish).
 
-	- (void)addRequestOperation:(RequestOperation *)operation;
+	- (void)addOperation:(RQOperation *)operation;
 	
-This adds a new RequestOperation to the queue. If there are fewer than `maxConcurrentRequestCount` operations already in the queue, this will start immediately. It is not valid to add the same RequestOperation to the queue more than once (this will throw an exception), however you can add the same request multiple times using different RequestOperation instances. Note that although RequestOperations are initiated in the order in which they were added (first in, first out), there is no guarantee that they will complete in the same order, unless the `maxConcurrentRequestCount` is set to 1.
+This adds a new RQOperation to the queue. If there are fewer than `maxConcurrentRequestCount` operations already in the queue, this will start immediately. It is not valid to add the same RQOperation to the queue more than once (this will throw an exception), however you can add the same request to a given queue multiple times using different RQOperation instances. Note that although RQOperations are initiated in the order in which they were added (first in, first out), there is no guarantee that they will complete in the same order, unless the `maxConcurrentRequestCount` is set to 1.
 	
-	- (void)addRequest:(NSURLRequest *)request completionHandler:(RequestCompletionHandler)completionHandler;
+	- (void)addRequest:(NSURLRequest *)request completionHandler:(RQCompletionHandler)completionHandler;
 	
-This creates a new RequestOperation with the specified completion handler and adds it to the queue. Note that the same request can be added to the queue multiple times and will be downloaded multiple times. If you want to avoid adding identical requests to the queue more than once, check if the `requests` property of the queue already contains an identical request before adding it by using the `contains:` method of NSArray.
+This creates a new RQOperation with the specified completion handler and adds it to the queue. Note that the same request can be added to the queue multiple times and will be downloaded multiple times. If you want to avoid adding identical requests to the queue more than once, check if the `requests` property of the queue already contains an identical request before adding it by using the `contains:` method of NSArray.
 	
 	- (void)cancelRequest:(NSURLRequest *)request;
 	
-This method will cancel the request if it is in progress and remove it from the queue. Regardless of whether the request has started or not, the completion handler block will receive the error `NSURLErrorCancelled`.
+This method will cancel the request if it is in progress and remove it from the queue. Regardless of whether the request has started or not, the completion handler block will receive the error `NSURLErrorCancelled`. *Note:* To cancel an RQOperation, you can just call the cancel method of the operation directly and it will automatically be removed from any queue to which it has been added.
 	
 	- (void)cancelAllRequests;
 	
@@ -138,10 +142,10 @@ Callbacks
 
 RequestQueue defines the following callback block functions that you can use to be notified about the request status and progress.
 
-	typedef void (^RequestCompletionHandler)(NSURLResponse *response, NSData *data, NSError *error);
+	typedef void (^RQCompletionHandler)(NSURLResponse *response, NSData *data, NSError *error);
 
-Upon completion of a request download, your callback will be called with these arguments. If the request was successful, the error parameter will be nil. In the event of an error, response and data may be nil or may not, depending on when the request failed. If the request was cancelled, the error code will be `NSURLErrorCancelled`.
+Upon completion of a request download, your callback will be called with these arguments. If the request was successful, the error parameter will be nil. In the event of an error, response and data may be nil or may not, depending on the nature of the error. If the request was cancelled, the error code will be `NSURLErrorCancelled`.
 
-    typedef void (^RequestProgressHandler)(float progress, NSInteger bytesTransferred, NSInteger totalBytes);
+    typedef void (^RQProgressHandler)(float progress, NSInteger bytesTransferred, NSInteger totalBytes);
     
-This callback is used to track the progress of a request upload or download. The progress parameter is a floating point value between 0.0 and 1.0, useful for updating a progress bar or other visual progress indicator. The bytesTransferred and totalBytes parameters indicate the number of bytes that have been transferred and the expected total number of bytes to be transferred, respectively. Note: totalBytes is often an estimate and may sometimes be incorrect, or unavailable (in which case the value ma be zero or -1). In these cases, the progress value is meaningless, and you should display an indeterminate progress indicator such as a spinner (UIActivityIndicatorView) or barber pole.
+This callback is used to track the progress of a request upload or download. The progress parameter is a floating point value between 0.0 and 1.0, useful for updating a progress bar or other visual progress indicator. The bytesTransferred and totalBytes parameters indicate the number of bytes that have been transferred and the expected total number of bytes to be transferred, respectively. Note: totalBytes is often an estimate and may sometimes be incorrect, or unavailable (in which case the value may be zero or -1). In these cases, the progress value is meaningless, and you should display an indeterminate progress indicator such as a spinner (UIActivityIndicatorView) or barber pole.

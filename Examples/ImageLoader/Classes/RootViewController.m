@@ -97,7 +97,16 @@
 				{
 					//image downloaded
 					UIImage *image = [UIImage imageWithData:data];
-					[images setObject:image forKey:urlString];
+                    if (image)
+                    {
+                        [images setObject:image forKey:urlString];
+                    }
+                    else
+                    {
+                        //image error
+                        NSInteger index = [urlStrings indexOfObject:urlString];
+                        [urlStrings replaceObjectAtIndex:index withObject:@"Image was missing or corrupt"];
+                    }
 				}
 				else
 				{
