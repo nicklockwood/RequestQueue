@@ -73,7 +73,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 {
     if ((self = [self init]))
     {
-        _request = [_request retain];
+        _request = [_request ah_retain];
         _connection = [[NSURLConnection alloc] initWithRequest:request delegate:self startImmediately:NO];
     }
     return self;
