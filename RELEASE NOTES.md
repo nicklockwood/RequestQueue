@@ -1,3 +1,8 @@
+Version 1.4.1
+
+- Fixed issue where RQOperation would not work if added to NSOperationQueue other than mainQueue
+- Updated ARC Helper library
+
 Version 1.4
 
 - HTTP status codes >= 400 are now treated as errors
