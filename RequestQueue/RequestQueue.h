@@ -88,6 +88,10 @@ RequestQueueMode;
 @property (nonatomic, copy) RQAuthenticationChallengeHandler authenticationChallengeHandler;
 @property (nonatomic, copy) NSSet *autoRetryErrorCodes;
 @property (nonatomic, assign) BOOL autoRetry;
+@property (nonatomic, assign) NSInteger uploadBytesTotal;
+@property (nonatomic, assign) NSInteger uploadBytesDone;
+@property (nonatomic, assign) NSInteger downloadBytesTotal;
+@property (nonatomic, assign) NSInteger downloadBytesDone;
 
 + (RQOperation *)operationWithRequest:(NSURLRequest *)request;
 - (RQOperation *)initWithRequest:(NSURLRequest *)request;
@@ -103,6 +107,7 @@ RequestQueueMode;
 @property (nonatomic, strong, readonly) NSArray *requests;
 @property (nonatomic, assign) RequestQueueMode queueMode;
 @property (nonatomic, assign) BOOL allowDuplicateRequests;
+@property (nonatomic, copy) void(^completionHandler)(BOOL success);
 
 + (RequestQueue *)mainQueue;
 
@@ -110,5 +115,10 @@ RequestQueueMode;
 - (void)addRequest:(NSURLRequest *)request completionHandler:(RQCompletionHandler)completionHandler;
 - (void)cancelRequest:(NSURLRequest *)request;
 - (void)cancelAllRequests;
+
+// Call this method before adding operations to this queue.
+// Whenever an operation fails, an internal success flag becomes `NO`.
+// This flag is then passed to the `completionHandler` block.
+- (void)clearSuccessFlag;
 
 @end
