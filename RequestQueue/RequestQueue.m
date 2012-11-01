@@ -44,6 +44,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 @property (assign, getter = isExecuting) BOOL executing;
 @property (assign, getter = isFinished) BOOL finished;
 @property (assign, getter = isCancelled) BOOL cancelled;
+@property (assign) BOOL success;
 
 @end
 
@@ -117,7 +118,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
     }
 }
 
-- (void)finish
+- (void)finish:(BOOL)success
 {
     @synchronized (self)
     {
@@ -127,6 +128,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
             [self willChangeValueForKey:@"isFinished"];
             _executing = NO;
             _finished = YES;
+            _success = success;
             [self didChangeValueForKey:@"isFinished"];
             [self didChangeValueForKey:@"isExecuting"];
         }
@@ -179,7 +181,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
     }
     else
     {
-        [self finish];
+        [self finish:NO];
         if (_completionHandler) _completionHandler(_responseReceived, _accumulatedData, error);
     }
 }
@@ -203,6 +205,8 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 
 - (void)connection:(NSURLConnection *)connection didSendBodyData:(NSInteger)bytesWritten totalBytesWritten:(NSInteger)totalBytesWritten totalBytesExpectedToWrite:(NSInteger)totalBytesExpectedToWrite
 {
+    self.uploadBytesTotal = totalBytesExpectedToWrite;
+    self.uploadBytesDone = totalBytesWritten;
     if (_uploadProgressHandler)
     {
         float progress = (float)totalBytesWritten / (float)totalBytesExpectedToWrite;
@@ -217,18 +221,16 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
         _accumulatedData = [[NSMutableData alloc] initWithCapacity:MAX(0, _responseReceived.expectedContentLength)];
     }
     [_accumulatedData appendData:data];
+    self.downloadBytesTotal = MAX(0, _responseReceived.expectedContentLength);
+    self.downloadBytesDone = [_accumulatedData length];
     if (_downloadProgressHandler)
     {
-        NSInteger bytesTransferred = [_accumulatedData length];
-        NSInteger totalBytes = MAX(0, _responseReceived.expectedContentLength);
-        _downloadProgressHandler((float)bytesTransferred / (float)totalBytes, bytesTransferred, totalBytes);
+        _downloadProgressHandler((float)self.downloadBytesDone / (float)self.downloadBytesTotal, self.downloadBytesDone, self.downloadBytesTotal);
     }
 }
 
 - (void)connectionDidFinishLoading:(NSURLConnection *)_connection
 {
-    [self finish];
-    
     NSError *error = nil;
     if ([_responseReceived respondsToSelector:@selector(statusCode)])
     {
@@ -243,7 +245,8 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
                                     userInfo:infoDict];
         }
     }
-    
+
+    [self finish:(error == nil)];
     if (_completionHandler) _completionHandler(_responseReceived, _accumulatedData, error);
 }
 
@@ -257,7 +260,9 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 @end
 
 
-@implementation RequestQueue
+@implementation RequestQueue {
+    BOOL _success;
+}
 
 @synthesize maxConcurrentRequestCount = _maxConcurrentRequestCount;
 @synthesize suspended = _suspended;
@@ -283,6 +288,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
         _operations = [[NSMutableArray alloc] init];
         _maxConcurrentRequestCount = 2;
         _allowDuplicateRequests = NO;
+        [self clearSuccessFlag];
     }
     return self;
 }
@@ -312,6 +318,10 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
         {
             [(RQOperation *)[_operations objectAtIndex:i] start];
         }
+    }
+
+    if ([_operations count] == 0 && self.completionHandler != nil) {
+        self.completionHandler(_success);
     }
 }
 
@@ -394,11 +404,18 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
     }
 }
 
+- (void)clearSuccessFlag {
+    _success = YES;
+}
+
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
 {
     RQOperation *operation = object;
     if (!operation.executing)
     {
+        if (!operation.success) {
+            _success = NO;
+        }
         [operation removeObserver:self forKeyPath:@"isExecuting"];
         [_operations removeObject:operation];
         [self dequeueOperations];
