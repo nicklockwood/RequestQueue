@@ -10,7 +10,7 @@
 
 @interface RootViewController : UITableViewController
 
-@property (nonatomic, retain) UIBarButtonItem *loadUnloadButton;
+@property (nonatomic, strong) UIBarButtonItem *loadUnloadButton;
 
 - (IBAction)loadUnloadImages;
 

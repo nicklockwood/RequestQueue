@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.4.1
+//  Version 1.5
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -33,6 +33,12 @@
 #import "RequestQueue.h"
 
 
+#import <Availability.h>
+#if !__has_feature(objc_arc)
+//#error This class requires automatic reference counting
+#endif
+
+
 NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 
 
@@ -41,39 +47,26 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 @property (nonatomic, strong) NSURLConnection *connection;
 @property (nonatomic, strong) NSURLResponse *responseReceived;
 @property (nonatomic, strong) NSMutableData *accumulatedData;
-@property (assign, getter = isExecuting) BOOL executing;
-@property (assign, getter = isFinished) BOOL finished;
-@property (assign, getter = isCancelled) BOOL cancelled;
+@property (nonatomic, getter = isExecuting) BOOL executing;
+@property (nonatomic, getter = isFinished) BOOL finished;
+@property (nonatomic, getter = isCancelled) BOOL cancelled;
 
 @end
 
 
 @implementation RQOperation
 
-@synthesize request = _request;
-@synthesize connection = _connection;
-@synthesize responseReceived = _responseReceived;
-@synthesize accumulatedData = _accumulatedData;
-@synthesize executing = _executing;
-@synthesize finished = _finished;
-@synthesize cancelled = _cancelled;
-@synthesize completionHandler = _completionHandler;
-@synthesize uploadProgressHandler = _uploadProgressHandler;
-@synthesize downloadProgressHandler = _downloadProgressHandler;
-@synthesize authenticationChallengeHandler = _authenticationChallengeHandler;
-@synthesize autoRetryErrorCodes = _autoRetryErrorCodes;
-@synthesize autoRetry = _autoRetry;
-
 + (RQOperation *)operationWithRequest:(NSURLRequest *)request
 {
-    return [[[self alloc] initWithRequest:request] autorelease];
+    return [[self alloc] initWithRequest:request];
 }
 
 - (RQOperation *)initWithRequest:(NSURLRequest *)request
 {
     if ((self = [self init]))
     {
-        _request = [_request ah_retain];
+        _request = request;
+        _autoRetryDelay = 5.0;
         _connection = [[NSURLConnection alloc] initWithRequest:request delegate:self startImmediately:NO];
     }
     return self;
@@ -141,12 +134,12 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
         if (!codes)
         {
             codes = [NSSet setWithObjects:
-                     [NSNumber numberWithInt:NSURLErrorTimedOut],
-                     [NSNumber numberWithInt:NSURLErrorCannotFindHost],
-                     [NSNumber numberWithInt:NSURLErrorCannotConnectToHost],
-                     [NSNumber numberWithInt:NSURLErrorDNSLookupFailed],
-                     [NSNumber numberWithInt:NSURLErrorNotConnectedToInternet],
-                     [NSNumber numberWithInt:NSURLErrorNetworkConnectionLost],
+                     @(NSURLErrorTimedOut),
+                     @(NSURLErrorCannotFindHost),
+                     @(NSURLErrorCannotConnectToHost),
+                     @(NSURLErrorDNSLookupFailed),
+                     @(NSURLErrorNotConnectedToInternet),
+                     @(NSURLErrorNetworkConnectionLost),
                      nil];
         }
         return codes;
@@ -154,28 +147,14 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
     return _autoRetryErrorCodes;
 }
 
-- (void)dealloc
-{
-    [_request release];
-    [_connection release];
-    [_responseReceived release];
-    [_accumulatedData release];
-    [_completionHandler release];
-    [_uploadProgressHandler release];
-    [_downloadProgressHandler release];
-    [_authenticationChallengeHandler release];
-    [_autoRetryErrorCodes release];
-    [super ah_dealloc];
-}
-
 #pragma mark NSURLConnectionDelegate
 
 - (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
 {
-    if (_autoRetry && [self.autoRetryErrorCodes containsObject:[NSNumber numberWithInt:error.code]])
+    if (_autoRetry && [self.autoRetryErrorCodes containsObject:@(error.code)])
     {
-        self.connection = [[[NSURLConnection alloc] initWithRequest:_request delegate:self startImmediately:NO] autorelease];
-        [self.connection performSelector:@selector(start) withObject:nil afterDelay:1.0];
+        _connection = [[NSURLConnection alloc] initWithRequest:_request delegate:self startImmediately:NO];
+        [_connection performSelector:@selector(start) withObject:nil afterDelay:_autoRetryDelay];
     }
     else
     {
@@ -198,7 +177,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 
 - (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response
 {
-    self.responseReceived = response;
+    _responseReceived = response;
 }
 
 - (void)connection:(NSURLConnection *)connection didSendBodyData:(NSInteger)bytesWritten totalBytesWritten:(NSInteger)totalBytesWritten totalBytesExpectedToWrite:(NSInteger)totalBytesExpectedToWrite
@@ -237,7 +216,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
         if (statusCode / 100 >= 4)
         {
             NSString *message = [NSString stringWithFormat:NSLocalizedString(@"The server returned a %i error", @"RequestQueue HTTPResponse error message format"), statusCode];
-            NSDictionary *infoDict = [NSDictionary dictionaryWithObject:message forKey:NSLocalizedDescriptionKey];
+            NSDictionary *infoDict = @{NSLocalizedDescriptionKey: message};
             error = [NSError errorWithDomain:HTTPResponseErrorDomain
                                         code:statusCode
                                     userInfo:infoDict];
@@ -252,18 +231,12 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 
 @interface RequestQueue () <NSURLConnectionDataDelegate>
 
-@property (nonatomic, strong) NSMutableArray *operations;
+@property (strong, nonatomic) NSMutableArray *operations;
 
 @end
 
 
 @implementation RequestQueue
-
-@synthesize maxConcurrentRequestCount = _maxConcurrentRequestCount;
-@synthesize suspended = _suspended;
-@synthesize operations = _operations;
-@synthesize queueMode = _queueMode;
-@synthesize allowDuplicateRequests = _allowDuplicateRequests;
 
 + (RequestQueue *)mainQueue
 {
@@ -287,12 +260,6 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
     return self;
 }
 
-- (void)dealloc
-{
-    [_operations release];
-    [super ah_dealloc];
-}
-
 - (NSUInteger)requestCount
 {
     return [_operations count];
@@ -310,7 +277,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
         NSInteger count = MIN([_operations count], _maxConcurrentRequestCount ?: INT_MAX);
         for (int i = 0; i < count; i++)
         {
-            [(RQOperation *)[_operations objectAtIndex:i] start];
+            [(RQOperation *)_operations[i] start];
         }
     }
 }
@@ -329,7 +296,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
     {
         for (int i = [_operations count] - 1; i >= 0 ; i--)
         {
-            RQOperation *_operation = [[[_operations objectAtIndex:i] ah_retain] autorelease];
+            RQOperation *_operation = _operations[i];
             if ([_operation.request isEqual:operation.request])
             {
                 [_operation cancel];
@@ -346,7 +313,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
     {
         for (index = 0; index < [_operations count]; index++)
         {
-            if (![[_operations objectAtIndex:index] isExecuting])
+            if (![_operations[index] isExecuting])
             {
                 break;
             }
@@ -376,7 +343,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 {
     for (int i = [_operations count] - 1; i >= 0 ; i--)
     {
-        RQOperation *operation = [[[_operations objectAtIndex:i] ah_retain] autorelease];
+        RQOperation *operation = _operations[i];
         if (operation.request == request)
         {
             [operation cancel];
@@ -386,8 +353,8 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 
 - (void)cancelAllRequests
 {
-    NSArray *operationsCopy = [[_operations ah_retain] autorelease];
-    self.operations = [NSMutableArray array];
+    NSArray *operationsCopy = _operations;
+    _operations = [NSMutableArray array];
     for (RQOperation *operation in operationsCopy)
     {
         [operation cancel];

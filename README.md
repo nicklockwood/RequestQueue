@@ -7,9 +7,9 @@ RequestQueue is a simple class for managing multiple concurrent asynchronous URL
 Supported OS & SDK Versions
 -----------------------------
 
-* Supported build target - iOS 5.1 / Mac OS 10.7 (Xcode 4.3.2, Apple LLVM compiler 3.1)
-* Earliest supported deployment target - iOS 4.3 / Mac OS 10.6
-* Earliest compatible deployment target - iOS 4.0 / Mac OS 10.6
+* Supported build target - iOS 6.0 / Mac OS 10.8 (Xcode 4.5.2, Apple LLVM compiler 4.1)
+* Earliest supported deployment target - iOS 5.0 / Mac OS 10.7
+* Earliest compatible deployment target - iOS 4.3 / Mac OS 10.7
 
 NOTE: 'Supported' means that the library has been tested with this version. 'Compatible' means that the library should work on this OS version (i.e. it doesn't rely on any unavailable SDK features) but is no longer being tested for compatibility and may require tweaking or bug fixes to run correctly.
 
@@ -17,7 +17,9 @@ NOTE: 'Supported' means that the library has been tested with this version. 'Com
 ARC Compatibility
 ------------------
 
-RequestQueue makes use of the ARC Helper library to automatically work with both ARC and non-ARC projects through conditional compilation. There is no need to exclude RequestQueue files from the ARC validation process, or to convert RequestQueue using the ARC conversion tool.
+As of version 1.5, RequestQueue requires ARC. If you wish to use RequestQueue in a non-ARC project, just add the -fobjc-arc compiler flag to the RequestQueue.m class. To do this, go to the Build Phases tab in your target settings, open the Compile Sources group, double-click RequestQueue.m in the list and type -fobjc-arc into the popover.
+
+If you wish to convert your whole project to ARC, comment out the #error line in RequestQueue.m, then run the Edit > Refactor > Convert to Objective-C ARC... tool in Xcode and make sure all files that you wish to use ARC for (including RequestQueue.m) are checked.
 
 
 Thread Safety
@@ -69,7 +71,11 @@ This is a block that will be called in the event of the server returning an auth
     
 A set of error codes to compare against when deciding if the request should automatically retry or not. By default this set includes any NSURLError types that relate to poor or unavailable connections. This means that the operation will retry if the Internet is down or the connection times out, but won't retry if the UL is malformed or the resource doesn't exist (which would be pointless). You can customise this set to meet the specific needs of your application if required.
 
-    @property (nonatomic, assign) BOOL autoRetry;
+    @property (nonatomic) NSTimeInterval autoRetryDelay;
+    
+If autoRetry is enabled, this is the delay before the request will be retried after a failed connection. Defaults to 5 seconds.
+
+    @property (nonatomic) BOOL autoRetry;
     
 If set to `YES`, the operation will automatically retry if there is a connection failure instead of terminating and calling the completionHandler. The operation will compare the error code against the autoRetryErrorCodes set, and will only retry if the code is in that set. Defaults to `NO`.
     
@@ -86,27 +92,27 @@ These methods are used to create a new request operation. RQOperations are singl
 RequestQueue Properties
 -------------------------
 
-	@property (nonatomic, assign) NSUInteger maxConcurrentRequestCount;
+	@property (nonatomic) NSUInteger maxConcurrentRequestCount;
 	
 This is the maximum number of concurrent requests. If more requests than this are added to the queue, they will be queued until the previous requests have completed. A value of 0 means that there is no limit to the number of concurrent requests. A value of 1 means that only one request will be active at a time, and will ensure that requests are completed in the same order that they are added (assuming `queueMode` is `RequestQueueModeFirstInFirstOut`). The default value is 2.
 	
-	@property (nonatomic, assign, getter = isSuspended) BOOL suspended;
+	@property (nonatomic, getter = isSuspended) BOOL suspended;
 	
 This property toggles whether the queued requests should be started or not. Requests that are already in progress will not be affected by toggling this property, but if suspended = YES, no new requests will be started until it is set to NO again. Setting this property to NO will immediately start the next queued requests downloading.
 	
-	@property (nonatomic, assign, readonly) NSUInteger requestCount;
+	@property (nonatomic, readonly) NSUInteger requestCount;
 	
 The number of requests in the queue. This includes both active requests and pending requests.
 	
-	@property (nonatomic, strong, readonly) NSArray *requests;
+	@property (nonatomic, copy, readonly) NSArray *requests;
 
 The requests in the queue. This includes both active requests and pending requests.
 
-    @property (nonatomic, assign) RequestQueueMode queueMode;
+    @property (nonatomic) RequestQueueMode queueMode;
     
 The queueMode property controls whether new request are added at the front or the back of the queue. The default value of `RequestQueueModeFirstInFirstOut` puts new requests at the back of the queue and the `RequestQueueModeLastInFirstOut` value puts them at the front. Last-in-first-out means that the more recent request is given priority. Requests that are already active will still finish first, but if a large backlog of requests builds up in the queue, newer requests will not be forced to wait until the backlog is cleared before they are dealt with.
 
-    @property (nonatomic, assign) BOOL allowDuplicateRequests;
+    @property (nonatomic) BOOL allowDuplicateRequests;
 
 This property controls whether the request queue allows multiple identical requests to be queued. If set to `NO` (the default), adding a duplicate request (i.e. a request with identical parameters to another request already in the queue) will result in the previously added request being cancelled. The completion handler for the cancelled request will be called with the NSURLErrorCancelled error as normal.
 

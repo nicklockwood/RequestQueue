@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.4.1
+//  Version 1.5
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -30,38 +30,6 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //
 
-//
-//  ARC Helper
-//
-//  Version 2.1
-//
-//  Created by Nick Lockwood on 05/01/2012.
-//  Copyright 2012 Charcoal Design
-//
-//  Distributed under the permissive zlib license
-//  Get the latest version from here:
-//
-//  https://gist.github.com/1563325
-//
-
-#ifndef ah_retain
-#if __has_feature(objc_arc)
-#define ah_retain self
-#define ah_dealloc self
-#define release self
-#define autorelease self
-#else
-#define ah_retain retain
-#define ah_dealloc dealloc
-#define __bridge
-#endif
-#endif
-
-//  ARC Helper ends
-
-
-#import <Foundation/Foundation.h>
-
 
 extern NSString *const HTTPResponseErrorDomain;
 
@@ -87,7 +55,8 @@ RequestQueueMode;
 @property (nonatomic, copy) RQProgressHandler downloadProgressHandler;
 @property (nonatomic, copy) RQAuthenticationChallengeHandler authenticationChallengeHandler;
 @property (nonatomic, copy) NSSet *autoRetryErrorCodes;
-@property (nonatomic, assign) BOOL autoRetry;
+@property (nonatomic) NSTimeInterval autoRetryDelay;
+@property (nonatomic) BOOL autoRetry;
 
 + (RQOperation *)operationWithRequest:(NSURLRequest *)request;
 - (RQOperation *)initWithRequest:(NSURLRequest *)request;
@@ -97,12 +66,12 @@ RequestQueueMode;
 
 @interface RequestQueue : NSObject
 
-@property (nonatomic, assign) NSUInteger maxConcurrentRequestCount;
-@property (nonatomic, assign, getter = isSuspended) BOOL suspended;
-@property (nonatomic, assign, readonly) NSUInteger requestCount;
-@property (nonatomic, strong, readonly) NSArray *requests;
-@property (nonatomic, assign) RequestQueueMode queueMode;
-@property (nonatomic, assign) BOOL allowDuplicateRequests;
+@property (nonatomic) NSUInteger maxConcurrentRequestCount;
+@property (nonatomic, getter = isSuspended) BOOL suspended;
+@property (nonatomic, readonly) NSUInteger requestCount;
+@property (nonatomic, copy, readonly) NSArray *requests;
+@property (nonatomic) RequestQueueMode queueMode;
+@property (nonatomic) BOOL allowDuplicateRequests;
 
 + (RequestQueue *)mainQueue;
 

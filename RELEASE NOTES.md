@@ -1,3 +1,9 @@
+Version 1.5
+
+- Now requires ARC (see README for details)
+- Fixed bug that prevented autoRetry from working correctly
+- You can now specify the autoRetry delay period
+
 Version 1.4.1
 
 - Fixed issue where RQOperation would not work if added to NSOperationQueue other than mainQueue

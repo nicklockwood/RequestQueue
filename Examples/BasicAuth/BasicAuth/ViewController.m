@@ -12,15 +12,12 @@
 
 @interface ViewController () <UIAlertViewDelegate>
 
-@property (nonatomic, strong) NSURLAuthenticationChallenge *challenge;
+@property (nonatomic) NSURLAuthenticationChallenge *challenge;
 
 @end
 
 
 @implementation ViewController
-
-@synthesize imageView;
-@synthesize challenge;
 
 - (void)viewDidLoad
 {
@@ -32,9 +29,9 @@
     RQOperation *operation = [RQOperation operationWithRequest:request];
     
     //add auth handler
-    operation.authenticationChallengeHandler = ^(NSURLAuthenticationChallenge *_challenge)
+    operation.authenticationChallengeHandler = ^(NSURLAuthenticationChallenge *challenge)
     {
-        challenge = _challenge;
+        _challenge = challenge;
         [[[UIAlertView alloc] initWithTitle:@"Challenge Receiver" message:@"Send credentials?" delegate:self cancelButtonTitle:@"Cancel" otherButtonTitles:@"Send", nil] show];
         
     };
@@ -49,7 +46,7 @@
         else
         {
             //set image
-            imageView.image = [UIImage imageWithData:data];
+            _imageView.image = [UIImage imageWithData:data];
         }
     };
     
@@ -62,7 +59,7 @@
     if (buttonIndex == alertView.cancelButtonIndex)
     {
         //don't send credentials
-        [challenge.sender continueWithoutCredentialForAuthenticationChallenge:challenge];
+        [_challenge.sender continueWithoutCredentialForAuthenticationChallenge:_challenge];
     }
     else
     {
@@ -71,7 +68,7 @@
                                                                  password:@"test"
                                                               persistence:NSURLCredentialPersistenceNone];
         //send credential
-        [challenge.sender useCredential:credential forAuthenticationChallenge:challenge];
+        [_challenge.sender useCredential:credential forAuthenticationChallenge:_challenge];
     }
 }
 

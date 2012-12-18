@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		01FDC29916811842001E49A6 /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 01FDC29816811842001E49A6 /* Default-568h@2x.png */; };
 		B22B852E156528300001A7C2 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B22B852D156528300001A7C2 /* UIKit.framework */; };
 		B22B8530156528300001A7C2 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B22B852F156528300001A7C2 /* Foundation.framework */; };
 		B22B8532156528300001A7C2 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B22B8531156528300001A7C2 /* CoreGraphics.framework */; };
@@ -19,6 +20,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		01FDC29816811842001E49A6 /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
 		B22B8529156528300001A7C2 /* BasicAuth.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BasicAuth.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B22B852D156528300001A7C2 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		B22B852F156528300001A7C2 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -94,6 +96,7 @@
 		B22B8534156528300001A7C2 /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				01FDC29816811842001E49A6 /* Default-568h@2x.png */,
 				B22B8535156528300001A7C2 /* BasicAuth-Info.plist */,
 				B22B8536156528300001A7C2 /* InfoPlist.strings */,
 				B22B8539156528300001A7C2 /* main.m */,
@@ -164,6 +167,7 @@
 			files = (
 				B22B8538156528300001A7C2 /* InfoPlist.strings in Resources */,
 				B22B8544156528300001A7C2 /* ViewController.xib in Resources */,
+				01FDC29916811842001E49A6 /* Default-568h@2x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -209,6 +213,7 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_OBJCPP_ARC_ABI = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
@@ -219,11 +224,13 @@
 					"$(inherited)",
 				);
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 5.1;
+				RUN_CLANG_STATIC_ANALYZER = YES;
 				SDKROOT = iphoneos;
 			};
 			name = Debug;
@@ -234,15 +241,18 @@
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_OBJCPP_ARC_ABI = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_TREAT_WARNINGS_AS_ERRORS = YES;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 5.1;
 				OTHER_CFLAGS = "-DNS_BLOCK_ASSERTIONS=1";
+				RUN_CLANG_STATIC_ANALYZER = YES;
 				SDKROOT = iphoneos;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -289,6 +299,7 @@
 				B22B8549156528300001A7C2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

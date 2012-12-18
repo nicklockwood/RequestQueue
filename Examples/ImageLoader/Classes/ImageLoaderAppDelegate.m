@@ -15,24 +15,12 @@
 @synthesize window;
 @synthesize navigationController;
 
-#pragma mark Application lifecycle
-
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {    
 	[window addSubview:[navigationController view]];
     [window makeKeyAndVisible];
 	return YES;
 }
-
-#pragma mark Memory management
-
-- (void)dealloc
-{
-	[navigationController release];
-	[window release];
-	[super dealloc];
-}
-
 
 @end
 

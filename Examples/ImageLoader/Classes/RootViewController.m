@@ -12,8 +12,8 @@
 
 @interface RootViewController ()
 
-@property (nonatomic, retain) NSMutableArray *urlStrings;
-@property (nonatomic, retain) NSMutableDictionary *images;
+@property (nonatomic, strong) NSMutableArray *urlStrings;
+@property (nonatomic, strong) NSMutableDictionary *images;
 
 @end
 
@@ -30,10 +30,10 @@
 {
     [super viewDidLoad];
 
-    self.loadUnloadButton = [[[UIBarButtonItem alloc] initWithTitle:@"Load"
+    self.loadUnloadButton = [[UIBarButtonItem alloc] initWithTitle:@"Load"
 															  style:UIBarButtonItemStylePlain
 															 target:self
-															 action:@selector(loadUnloadImages)] autorelease];
+															 action:@selector(loadUnloadImages)];
 	
 	self.navigationItem.rightBarButtonItem = loadUnloadButton;
 	self.navigationItem.title = @"Images";
@@ -99,20 +99,20 @@
 					UIImage *image = [UIImage imageWithData:data];
                     if (image)
                     {
-                        [images setObject:image forKey:urlString];
+                        images[urlString] = image;
                     }
                     else
                     {
                         //image error
                         NSInteger index = [urlStrings indexOfObject:urlString];
-                        [urlStrings replaceObjectAtIndex:index withObject:@"Image was missing or corrupt"];
+                        urlStrings[index] = @"Image was missing or corrupt";
                     }
 				}
 				else
 				{
 					//loading error
 					NSInteger index = [urlStrings indexOfObject:urlString];
-					[urlStrings replaceObjectAtIndex:index withObject:[error localizedDescription]];
+					urlStrings[index] = [error localizedDescription];
 				}
 				
 				//refresh view
@@ -137,11 +137,11 @@
     UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:CellIdentifier];
     if (cell == nil)
 	{
-        cell = [[[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier] autorelease];
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:CellIdentifier];
 	}
     
-	NSString *urlString = [urlStrings objectAtIndex:indexPath.row];
-	cell.imageView.image = [images objectForKey:urlString];
+	NSString *urlString = urlStrings[indexPath.row];
+	cell.imageView.image = images[urlString];
 	cell.textLabel.text = [urlString lastPathComponent];
 
     return cell;
@@ -155,15 +155,13 @@
 	UIViewController *viewController = [[UIViewController alloc] init];
 
 	//set view
-	NSString *urlString = [urlStrings objectAtIndex:indexPath.row];
-	UIImage *image = [images objectForKey:urlString];
+	NSString *urlString = urlStrings[indexPath.row];
+	UIImage *image = images[urlString];
 	UIImageView *imageView = [[UIImageView alloc] initWithImage:image];
 	viewController.view = imageView;
-	[imageView release];
 	
 	//pass the selected object to the new view controller.
 	[self.navigationController pushViewController:viewController animated:YES];
-	[viewController release];
 }
 
 #pragma mark Memory management
@@ -174,13 +172,6 @@
 	[super viewDidUnload];
 }
 
-- (void)dealloc
-{	
-	[loadUnloadButton release];
-	[urlStrings release];
-	[images release];
-    [super dealloc];
-}
 
 
 @end
