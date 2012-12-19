@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.5
+//  Version 1.5.1
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -81,7 +81,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 {
     @synchronized (self)
     {
-        if (!_executing)
+        if (!_executing && !_cancelled)
         {
             [self willChangeValueForKey:@"isExecuting"];
             _executing = YES;

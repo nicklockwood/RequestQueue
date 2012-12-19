@@ -1,3 +1,7 @@
+Version 1.5.1
+
+- Fixed a potential issue where cancelling a request during the autoRetry delay period would not work correctly
+
 Version 1.5
 
 - Now requires ARC (see README for details)
