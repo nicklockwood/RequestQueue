@@ -328,7 +328,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
         [_operations addObject:operation];
     }
     
-    [operation addObserver:self forKeyPath:@"isExecuting" options:NSKeyValueChangeSetting context:NULL];
+    [operation addObserver:self forKeyPath:@"isExecuting" options:NSKeyValueObservingOptionNew context:NULL];
     [self dequeueOperations];
 }
 
