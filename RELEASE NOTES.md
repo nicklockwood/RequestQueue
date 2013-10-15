@@ -1,3 +1,9 @@
+Version 1.5.2
+
+- Fixed KVO error
+- Now conforms to -Wextra warning level
+- Added podspec
+
 Version 1.5.1
 
 - Fixed a potential issue where cancelling a request during the autoRetry delay period would not work correctly

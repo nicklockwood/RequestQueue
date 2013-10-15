@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.5.1
+//  Version 1.5.2
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -58,8 +58,8 @@ RequestQueueMode;
 @property (nonatomic) NSTimeInterval autoRetryDelay;
 @property (nonatomic) BOOL autoRetry;
 
-+ (RQOperation *)operationWithRequest:(NSURLRequest *)request;
-- (RQOperation *)initWithRequest:(NSURLRequest *)request;
++ (instancetype)operationWithRequest:(NSURLRequest *)request;
+- (instancetype)initWithRequest:(NSURLRequest *)request;
 
 @end
 
@@ -73,7 +73,7 @@ RequestQueueMode;
 @property (nonatomic) RequestQueueMode queueMode;
 @property (nonatomic) BOOL allowDuplicateRequests;
 
-+ (RequestQueue *)mainQueue;
++ (instancetype)mainQueue;
 
 - (void)addOperation:(RQOperation *)operation;
 - (void)addRequest:(NSURLRequest *)request completionHandler:(RQCompletionHandler)completionHandler;

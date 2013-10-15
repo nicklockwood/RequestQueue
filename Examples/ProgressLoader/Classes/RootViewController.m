@@ -99,7 +99,7 @@
 			RQOperation *operation = [RQOperation operationWithRequest:request];
 
 			//completion handler
-			operation.completionHandler = ^(NSURLResponse *response, NSData *data, NSError *error) {
+			operation.completionHandler = ^(__unused NSURLResponse *response, NSData *data, NSError *error) {
 				
 				if (!error)
 				{
@@ -128,7 +128,7 @@
 			};
 			
 			//progress handler
-			operation.downloadProgressHandler = ^(float progress, NSInteger bytesTransferred, NSInteger totalBytes) {
+			operation.downloadProgressHandler = ^(float progress, __unused NSInteger bytesTransferred, __unused NSInteger totalBytes) {
 				
 				//update progress
 				progressStatuses[urlString] = @(progress);
@@ -146,7 +146,7 @@
 
 #pragma mark Table view data source
 
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+- (NSInteger)tableView:(__unused UITableView *)tableView numberOfRowsInSection:(__unused NSInteger)section
 {	
     return [urlStrings count];
 }
@@ -176,7 +176,7 @@
 
 #pragma mark Table view delegate
 
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+- (void)tableView:(__unused UITableView *)tableView didSelectRowAtIndexPath:(__unused NSIndexPath *)indexPath
 {    
 	//create view controller
 	UIViewController *viewController = [[UIViewController alloc] init];

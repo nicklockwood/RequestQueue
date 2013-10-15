@@ -12,7 +12,7 @@
 
 @implementation ImageLoaderAppDelegate
 
-- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
+- (BOOL)application:(__unused UIApplication *)application didFinishLaunchingWithOptions:(__unused NSDictionary *)launchOptions
 {    
 	_window.rootViewController = _navigationController;
     [_window makeKeyAndVisible];

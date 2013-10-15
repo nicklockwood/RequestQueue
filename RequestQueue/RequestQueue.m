@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.5.1
+//  Version 1.5.2
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -35,7 +35,7 @@
 
 #import <Availability.h>
 #if !__has_feature(objc_arc)
-//#error This class requires automatic reference counting
+#error This class requires automatic reference counting
 #endif
 
 
@@ -56,12 +56,12 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 
 @implementation RQOperation
 
-+ (RQOperation *)operationWithRequest:(NSURLRequest *)request
++ (instancetype)operationWithRequest:(NSURLRequest *)request
 {
     return [[self alloc] initWithRequest:request];
 }
 
-- (RQOperation *)initWithRequest:(NSURLRequest *)request
+- (instancetype)initWithRequest:(NSURLRequest *)request
 {
     if ((self = [self init]))
     {
@@ -149,7 +149,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 
 #pragma mark NSURLConnectionDelegate
 
-- (void)connection:(NSURLConnection *)connection didFailWithError:(NSError *)error
+- (void)connection:(__unused NSURLConnection *)connection didFailWithError:(NSError *)error
 {
     if (_autoRetry && [self.autoRetryErrorCodes containsObject:@(error.code)])
     {
@@ -163,7 +163,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
     }
 }
 
-- (void)connection:(NSURLConnection *)_connection didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
+- (void)connection:(__unused NSURLConnection *)_connection didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
 {
     if (_authenticationChallengeHandler)
     {
@@ -175,12 +175,12 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
     }
 }
 
-- (void)connection:(NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response
+- (void)connection:(__unused NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response
 {
     _responseReceived = response;
 }
 
-- (void)connection:(NSURLConnection *)connection didSendBodyData:(NSInteger)bytesWritten totalBytesWritten:(NSInteger)totalBytesWritten totalBytesExpectedToWrite:(NSInteger)totalBytesExpectedToWrite
+- (void)connection:(__unused NSURLConnection *)connection didSendBodyData:(__unused NSInteger)bytesWritten totalBytesWritten:(NSInteger)totalBytesWritten totalBytesExpectedToWrite:(NSInteger)totalBytesExpectedToWrite
 {
     if (_uploadProgressHandler)
     {
@@ -189,7 +189,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
     }
 }
 
-- (void)connection:(NSURLConnection *)connection didReceiveData:(NSData *)data
+- (void)connection:(__unused NSURLConnection *)connection didReceiveData:(NSData *)data
 {
     if (_accumulatedData == nil)
     {
@@ -204,7 +204,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
     }
 }
 
-- (void)connectionDidFinishLoading:(NSURLConnection *)_connection
+- (void)connectionDidFinishLoading:(__unused NSURLConnection *)_connection
 {
     [self finish];
     
@@ -238,7 +238,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 
 @implementation RequestQueue
 
-+ (RequestQueue *)mainQueue
++ (instancetype)mainQueue
 {
     static RequestQueue *mainQueue = nil;
     if (mainQueue == nil)
@@ -304,7 +304,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
         }
     }
     
-    NSInteger index = 0;
+    NSUInteger index = 0;
     if (_queueMode == RequestQueueModeFirstInFirstOut)
     {
         index = [_operations count];
@@ -361,14 +361,17 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
     }
 }
 
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(__unused NSDictionary *)change context:(__unused void *)context
 {
-    RQOperation *operation = object;
-    if (!operation.executing)
+    if ([keyPath isEqualToString:@"isExecuting"])
     {
-        [operation removeObserver:self forKeyPath:@"isExecuting"];
-        [_operations removeObject:operation];
-        [self dequeueOperations];
+        RQOperation *operation = object;
+        if (!operation.executing)
+        {
+            [operation removeObserver:self forKeyPath:keyPath];
+            [_operations removeObject:operation];
+            [self dequeueOperations];
+        }
     }
 }
 

@@ -91,7 +91,7 @@
 			NSURL *URL = [NSURL URLWithString:urlString];
 			NSURLCacheStoragePolicy policy = NSURLCacheStorageNotAllowed;
 			NSURLRequest *request = [NSURLRequest requestWithURL:URL cachePolicy:policy timeoutInterval:15.0];
-			[[RequestQueue mainQueue] addRequest:request completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
+			[[RequestQueue mainQueue] addRequest:request completionHandler:^(__unused NSURLResponse *response, NSData *data, NSError *error) {
 				
 				if (!error)
 				{
@@ -125,7 +125,7 @@
 
 #pragma mark Table view data source
 
-- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
+- (NSInteger)tableView:(__unused UITableView *)tableView numberOfRowsInSection:(__unused NSInteger)section
 {	
     return [urlStrings count];
 }
@@ -149,7 +149,7 @@
 
 #pragma mark Table view delegate
 
-- (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
+- (void)tableView:(__unused UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {    
 	//create view controller
 	UIViewController *viewController = [[UIViewController alloc] init];

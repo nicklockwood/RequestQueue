@@ -37,7 +37,7 @@
     };
     
     //add response handler
-    operation.completionHandler = ^(NSURLResponse *response, NSData *data, NSError *error)
+    operation.completionHandler = ^(__unused NSURLResponse *response, NSData *data, NSError *error)
     {
         if (error)
         {
