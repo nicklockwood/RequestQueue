@@ -7,7 +7,7 @@ RequestQueue is a simple class for managing multiple concurrent asynchronous URL
 Supported OS & SDK Versions
 -----------------------------
 
-* Supported build target - iOS 7.0 / Mac OS 10.8 (Xcode 5.0, Apple LLVM compiler 5.0)
+* Supported build target - iOS 7.1 / Mac OS 10.9 (Xcode 5.1, Apple LLVM compiler 5.1)
 * Earliest supported deployment target - iOS 5.0 / Mac OS 10.8
 * Earliest compatible deployment target - iOS 4.3 / Mac OS 10.7
 
@@ -155,3 +155,71 @@ Upon completion of a request download, your callback will be called with these a
     typedef void (^RQProgressHandler)(float progress, NSInteger bytesTransferred, NSInteger totalBytes);
     
 This callback is used to track the progress of a request upload or download. The progress parameter is a floating point value between 0.0 and 1.0, useful for updating a progress bar or other visual progress indicator. The bytesTransferred and totalBytes parameters indicate the number of bytes that have been transferred and the expected total number of bytes to be transferred, respectively. Note: totalBytes is often an estimate and may sometimes be incorrect, or unavailable (in which case the value may be zero or -1). In these cases, the progress value is meaningless, and you should display an indeterminate progress indicator such as a spinner (UIActivityIndicatorView) or barber pole.
+
+
+Release Notes
+----------------
+
+Version 1.5.3
+
+- Fixed conversion warnings under arm64
+- Now conforms to -Weverything warning level
+
+Version 1.5.2
+
+- Fixed KVO error
+- Now conforms to -Wextra warning level
+- Added Podspec
+
+Version 1.5.1
+
+- Fixed a potential issue where cancelling a request during the autoRetry delay period would not work correctly
+
+Version 1.5
+
+- Now requires ARC (see README for details)
+- Fixed bug that prevented autoRetry from working correctly
+- You can now specify the autoRetry delay period
+
+Version 1.4.1
+
+- Fixed issue where RQOperation would not work if added to NSOperationQueue other than mainQueue
+- Updated ARC Helper library
+
+Version 1.4
+
+- HTTP status codes >= 400 are now treated as errors
+- Added RQAuthenticationChallengeHandler for handling HTTP basic auth
+- Renamed RequestOperation to RQOperation
+- Name-spaced the request handler block function signatures
+- Added BasicAuth example project
+
+Version 1.3
+
+- Added `autoRetry` property to RequestOperation class
+- Added `allowDuplicateRequests` property to RequestQueue class
+- If a duplicate request is added to the queue, the previous duplicate is now cancelled by default
+
+Version 1.2
+
+- Major internal rewrite using NSOperations
+- Added new RequestOperation class for individual requests
+- Added upload and download progress callbacks
+- Renamed all instances of 'Connection' to 'Request' for consistency
+- Fixed leak of finished requests
+- Simplified image loader example
+- Added progress loader example
+
+Version 1.1.1
+
+- Now handles case where expectedContentLength returns -1
+
+Version 1.1
+
+- Added mode property to control queuing
+- Fixed some memory leaks when not running under ARC
+- Eliminated analyzer warnings
+
+Version 1.0
+
+- Initial release

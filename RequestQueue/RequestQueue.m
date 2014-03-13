@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.5.2
+//  Version 1.5.3
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -30,6 +30,7 @@
 //  3. This notice may not be removed or altered from any source distribution.
 //
 
+
 #import "RequestQueue.h"
 
 
@@ -37,6 +38,11 @@
 #if !__has_feature(objc_arc)
 #error This class requires automatic reference counting
 #endif
+
+
+#pragma GCC diagnostic ignored "-Wobjc-missing-property-synthesis"
+#pragma GCC diagnostic ignored "-Wconversion"
+#pragma GCC diagnostic ignored "-Wgnu"
 
 
 NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
@@ -81,12 +87,12 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 {
     @synchronized (self)
     {
-        if (!_executing && !_cancelled)
+        if (!self.executing && !self.cancelled)
         {
             [self willChangeValueForKey:@"isExecuting"];
-            _executing = YES;
-            [_connection scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
-            [_connection start];
+            self.executing = YES;
+            [self.connection scheduleInRunLoop:[NSRunLoop mainRunLoop] forMode:NSRunLoopCommonModes];
+            [self.connection start];
             [self didChangeValueForKey:@"isExecuting"];
         }
     }
@@ -96,16 +102,16 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 {
     @synchronized (self)
     {
-        if (!_cancelled)
+        if (!self.cancelled)
         {
             [self willChangeValueForKey:@"isCancelled"];
-            _cancelled = YES;
-            [_connection cancel];
+            self.cancelled = YES;
+            [self.connection cancel];
             [self didChangeValueForKey:@"isCancelled"];
             
             //call callback
             NSError *error = [NSError errorWithDomain:NSURLErrorDomain code:NSURLErrorCancelled userInfo:nil];
-            [self connection:_connection didFailWithError:error];
+            [self connection:self.connection didFailWithError:error];
         }
     }
 }
@@ -114,12 +120,12 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 {
     @synchronized (self)
     {
-        if (_executing && !_finished)
+        if (self.executing && !self.finished)
         {
             [self willChangeValueForKey:@"isExecuting"];
             [self willChangeValueForKey:@"isFinished"];
-            _executing = NO;
-            _finished = YES;
+            self.executing = NO;
+            self.finished = YES;
             [self didChangeValueForKey:@"isFinished"];
             [self didChangeValueForKey:@"isExecuting"];
         }
@@ -151,23 +157,23 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 
 - (void)connection:(__unused NSURLConnection *)connection didFailWithError:(NSError *)error
 {
-    if (_autoRetry && [self.autoRetryErrorCodes containsObject:@(error.code)])
+    if (self.autoRetry && [self.autoRetryErrorCodes containsObject:@(error.code)])
     {
-        _connection = [[NSURLConnection alloc] initWithRequest:_request delegate:self startImmediately:NO];
-        [_connection performSelector:@selector(start) withObject:nil afterDelay:_autoRetryDelay];
+        self.connection = [[NSURLConnection alloc] initWithRequest:self.request delegate:self startImmediately:NO];
+        [self.connection performSelector:@selector(start) withObject:nil afterDelay:self.autoRetryDelay];
     }
     else
     {
         [self finish];
-        if (_completionHandler) _completionHandler(_responseReceived, _accumulatedData, error);
+        if (self.completionHandler) self.completionHandler(self.responseReceived, self.accumulatedData, error);
     }
 }
 
 - (void)connection:(__unused NSURLConnection *)_connection didReceiveAuthenticationChallenge:(NSURLAuthenticationChallenge *)challenge
 {
-    if (_authenticationChallengeHandler)
+    if (self.authenticationChallengeHandler)
     {
-        _authenticationChallengeHandler(challenge);
+        self.authenticationChallengeHandler(challenge);
     }
     else
     {
@@ -177,30 +183,30 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 
 - (void)connection:(__unused NSURLConnection *)connection didReceiveResponse:(NSURLResponse *)response
 {
-    _responseReceived = response;
+    self.responseReceived = response;
 }
 
 - (void)connection:(__unused NSURLConnection *)connection didSendBodyData:(__unused NSInteger)bytesWritten totalBytesWritten:(NSInteger)totalBytesWritten totalBytesExpectedToWrite:(NSInteger)totalBytesExpectedToWrite
 {
-    if (_uploadProgressHandler)
+    if (self.uploadProgressHandler)
     {
         float progress = (float)totalBytesWritten / (float)totalBytesExpectedToWrite;
-        _uploadProgressHandler(progress, totalBytesWritten, totalBytesExpectedToWrite);
+        self.uploadProgressHandler(progress, totalBytesWritten, totalBytesExpectedToWrite);
     }
 }
 
 - (void)connection:(__unused NSURLConnection *)connection didReceiveData:(NSData *)data
 {
-    if (_accumulatedData == nil)
+    if (self.accumulatedData == nil)
     {
-        _accumulatedData = [[NSMutableData alloc] initWithCapacity:MAX(0, _responseReceived.expectedContentLength)];
+        self.accumulatedData = [[NSMutableData alloc] initWithCapacity:MAX(0, self.responseReceived.expectedContentLength)];
     }
-    [_accumulatedData appendData:data];
-    if (_downloadProgressHandler)
+    [self.accumulatedData appendData:data];
+    if (self.downloadProgressHandler)
     {
-        NSInteger bytesTransferred = [_accumulatedData length];
-        NSInteger totalBytes = MAX(0, _responseReceived.expectedContentLength);
-        _downloadProgressHandler((float)bytesTransferred / (float)totalBytes, bytesTransferred, totalBytes);
+        NSInteger bytesTransferred = [self.accumulatedData length];
+        NSInteger totalBytes = MAX(0, self.responseReceived.expectedContentLength);
+        self.downloadProgressHandler((float)bytesTransferred / (float)totalBytes, bytesTransferred, totalBytes);
     }
 }
 
@@ -209,10 +215,10 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
     [self finish];
     
     NSError *error = nil;
-    if ([_responseReceived respondsToSelector:@selector(statusCode)])
+    if ([self.responseReceived respondsToSelector:@selector(statusCode)])
     {
         //treat status codes >= 400 as an error
-        NSInteger statusCode = [(NSHTTPURLResponse *)_responseReceived statusCode];
+        NSInteger statusCode = [(NSHTTPURLResponse *)self.responseReceived statusCode];
         if (statusCode / 100 >= 4)
         {
             NSString *message = [NSString stringWithFormat:NSLocalizedString(@"The server returned a %i error", @"RequestQueue HTTPResponse error message format"), statusCode];
@@ -223,7 +229,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
         }
     }
     
-    if (_completionHandler) _completionHandler(_responseReceived, _accumulatedData, error);
+    if (self.completionHandler) self.completionHandler(self.responseReceived, self.accumulatedData, error);
 }
 
 @end
@@ -262,22 +268,22 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 
 - (NSUInteger)requestCount
 {
-    return [_operations count];
+    return [self.operations count];
 }
 
 - (NSArray *)requests
 {
-    return [_operations valueForKeyPath:@"request"];
+    return [self.operations valueForKeyPath:@"request"];
 }
 
 - (void)dequeueOperations
 {
-    if (!_suspended)
+    if (!self.suspended)
     {
-        NSInteger count = MIN([_operations count], _maxConcurrentRequestCount ?: INT_MAX);
+        NSInteger count = MIN([self.operations count], self.maxConcurrentRequestCount ?: INT_MAX);
         for (int i = 0; i < count; i++)
         {
-            [(RQOperation *)_operations[i] start];
+            [(RQOperation *)self.operations[i] start];
         }
     }
 }
@@ -292,40 +298,40 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 
 - (void)addOperation:(RQOperation *)operation
 {
-    if (!_allowDuplicateRequests)
+    if (!self.allowDuplicateRequests)
     {
-        for (int i = [_operations count] - 1; i >= 0 ; i--)
+        for (RQOperation *op in [self.operations reverseObjectEnumerator])
         {
-            RQOperation *_operation = _operations[i];
-            if ([_operation.request isEqual:operation.request])
+            if ([op.request isEqual:operation.request])
             {
-                [_operation cancel];
+                [op cancel];
             }
         }
     }
     
     NSUInteger index = 0;
-    if (_queueMode == RequestQueueModeFirstInFirstOut)
+    if (self.queueMode == RequestQueueModeFirstInFirstOut)
     {
-        index = [_operations count];
+        index = [self.operations count];
     }
     else
     {
-        for (index = 0; index < [_operations count]; index++)
+        for (RQOperation *op in self.operations)
         {
-            if (![_operations[index] isExecuting])
+            if (![op isExecuting])
             {
                 break;
             }
+            index ++;
         }
     }
-    if (index < [_operations count])
+    if (index < [self.operations count])
     {
-        [_operations insertObject:operation atIndex:index];
+        [self.operations insertObject:operation atIndex:index];
     }
     else
     {
-        [_operations addObject:operation];
+        [self.operations addObject:operation];
     }
     
     [operation addObserver:self forKeyPath:@"isExecuting" options:NSKeyValueObservingOptionNew context:NULL];
@@ -341,24 +347,20 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 
 - (void)cancelRequest:(NSURLRequest *)request
 {
-    for (int i = [_operations count] - 1; i >= 0 ; i--)
+    for (RQOperation *op in [self.operations reverseObjectEnumerator])
     {
-        RQOperation *operation = _operations[i];
-        if (operation.request == request)
+        if (op.request == request)
         {
-            [operation cancel];
+            [op cancel];
         }
     }
 }
 
 - (void)cancelAllRequests
 {
-    NSArray *operationsCopy = _operations;
-    _operations = [NSMutableArray array];
-    for (RQOperation *operation in operationsCopy)
-    {
-        [operation cancel];
-    }
+    NSArray *operationsCopy = self.operations;
+    self.operations = [NSMutableArray array];
+    [operationsCopy makeObjectsPerformSelector:@selector(cancel)];
 }
 
 - (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(__unused NSDictionary *)change context:(__unused void *)context
@@ -369,7 +371,7 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
         if (!operation.executing)
         {
             [operation removeObserver:self forKeyPath:keyPath];
-            [_operations removeObject:operation];
+            [self.operations removeObject:operation];
             [self dequeueOperations];
         }
     }

@@ -21,11 +21,6 @@
 
 @implementation RootViewController
 
-@synthesize loadUnloadButton;
-@synthesize urlStrings;
-@synthesize images;
-@synthesize progressStatuses;
-
 #pragma mark View lifecycle
 
 - (void)viewDidLoad
@@ -37,7 +32,7 @@
 															 target:self
 															 action:@selector(loadUnloadImages)];
 	
-	self.navigationItem.rightBarButtonItem = loadUnloadButton;
+	self.navigationItem.rightBarButtonItem = self.loadUnloadButton;
 	self.navigationItem.title = @"Images";
 }
 
@@ -50,27 +45,27 @@
 	if ([[RequestQueue mainQueue] requestCount])
 	{
 		//loading
-		loadUnloadButton.enabled = NO;
-		loadUnloadButton.title = @"Wait";
+		self.loadUnloadButton.enabled = NO;
+		self.loadUnloadButton.title = @"Wait";
 	}
-	else if ([urlStrings count])
+	else if ([self.urlStrings count])
 	{
 		//finished
-		loadUnloadButton.enabled = YES;
-		loadUnloadButton.title = @"Clear";
+		self.loadUnloadButton.enabled = YES;
+		self.loadUnloadButton.title = @"Clear";
 	}
 	else
 	{
 		//idle
-		loadUnloadButton.enabled = YES;
-		loadUnloadButton.title = @"Load";
+		self.loadUnloadButton.enabled = YES;
+		self.loadUnloadButton.title = @"Load";
 	}
 }
 
 - (void)loadUnloadImages
 {	
 	//select action
-	if ([urlStrings count])
+	if ([self.urlStrings count])
 	{
 		//clear images
 		self.urlStrings = nil;
@@ -90,7 +85,7 @@
 		[self refreshView];
 		
 		//load images
-		for (NSString *urlString in urlStrings)
+		for (NSString *urlString in self.urlStrings)
 		{
 			//create operation
 			NSURL *URL = [NSURL URLWithString:urlString];
@@ -107,20 +102,20 @@
 					UIImage *image = [UIImage imageWithData:data];
                     if (image)
                     {
-                        images[urlString] = image;
+                        self.images[urlString] = image;
                     }
                     else
                     {
                         //image error
-                        NSInteger index = [urlStrings indexOfObject:urlString];
-                        urlStrings[index] = @"Image was missing or corrupt";
+                        NSUInteger index = [self.urlStrings indexOfObject:urlString];
+                        self.urlStrings[index] = @"Image was missing or corrupt";
                     }
 				}
 				else
 				{
 					//loading error
-					NSInteger index = [urlStrings indexOfObject:urlString];
-					urlStrings[index] = [error localizedDescription];
+					NSUInteger index = [self.urlStrings indexOfObject:urlString];
+					self.urlStrings[index] = [error localizedDescription];
 				}
 				
 				//refresh view
@@ -131,7 +126,7 @@
 			operation.downloadProgressHandler = ^(float progress, __unused NSInteger bytesTransferred, __unused NSInteger totalBytes) {
 				
 				//update progress
-				progressStatuses[urlString] = @(progress);
+				self.progressStatuses[urlString] = @(progress);
 				
 				//refresh view
 				[self refreshView];
@@ -148,7 +143,7 @@
 
 - (NSInteger)tableView:(__unused UITableView *)tableView numberOfRowsInSection:(__unused NSInteger)section
 {	
-    return [urlStrings count];
+    return (NSInteger)[self.urlStrings count];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
@@ -166,24 +161,24 @@
 		[cell addSubview:progressView];
 	}
     
-	NSString *urlString = urlStrings[indexPath.row];
-	cell.imageView.image = images[urlString];
+	NSString *urlString = self.urlStrings[(NSUInteger)indexPath.row];
+	cell.imageView.image = self.images[urlString];
 	UIProgressView *progressView = (UIProgressView *)[cell viewWithTag:99];
-	progressView.progress = [progressStatuses[urlString] floatValue];
+	progressView.progress = [self.progressStatuses[urlString] floatValue];
 	
     return cell;
 }
 
 #pragma mark Table view delegate
 
-- (void)tableView:(__unused UITableView *)tableView didSelectRowAtIndexPath:(__unused NSIndexPath *)indexPath
+- (void)tableView:(__unused UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath
 {    
 	//create view controller
 	UIViewController *viewController = [[UIViewController alloc] init];
 
 	//set view
-	NSString *urlString = urlStrings[indexPath.row];
-	UIImage *image = images[urlString];
+	NSString *urlString = self.urlStrings[(NSUInteger)indexPath.row];
+	UIImage *image = self.images[urlString];
 	UIImageView *imageView = [[UIImageView alloc] initWithImage:image];
 	viewController.view = imageView;
 	
@@ -198,8 +193,6 @@
 	self.loadUnloadButton = nil;
 	[super viewDidUnload];
 }
-
-
 
 @end
 

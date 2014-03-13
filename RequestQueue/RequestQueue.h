@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.5.2
+//  Version 1.5.3
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -29,6 +29,11 @@
 //
 //  3. This notice may not be removed or altered from any source distribution.
 //
+
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wobjc-missing-property-synthesis"
+#import <Foundation/Foundation.h>
 
 
 extern NSString *const HTTPResponseErrorDomain;
@@ -81,3 +86,7 @@ RequestQueueMode;
 - (void)cancelAllRequests;
 
 @end
+
+
+#pragma GCC diagnostic pop
+

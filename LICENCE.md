@@ -1,6 +1,6 @@
 RequestQueue
 
-Version 1.5.2, October 15th, 2013
+Version 1.5.3, March 13th, 2014
 
 Copyright (C) 2012 Charcoal Design
 

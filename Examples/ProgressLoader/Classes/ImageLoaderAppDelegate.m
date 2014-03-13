@@ -14,8 +14,8 @@
 
 - (BOOL)application:(__unused UIApplication *)application didFinishLaunchingWithOptions:(__unused NSDictionary *)launchOptions
 {    
-	_window.rootViewController = _navigationController;
-    [_window makeKeyAndVisible];
+	self.window.rootViewController = self.navigationController;
+    [self.window makeKeyAndVisible];
 	return YES;
 }
 
