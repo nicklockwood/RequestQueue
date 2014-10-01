@@ -7,7 +7,7 @@ RequestQueue is a simple class for managing multiple concurrent asynchronous URL
 Supported OS & SDK Versions
 -----------------------------
 
-* Supported build target - iOS 7.1 / Mac OS 10.9 (Xcode 5.1, Apple LLVM compiler 5.1)
+* Supported build target - iOS 8.0 / Mac OS 10.9 (Xcode 6.0, Apple LLVM compiler 6.0)
 * Earliest supported deployment target - iOS 5.0 / Mac OS 10.8
 * Earliest compatible deployment target - iOS 4.3 / Mac OS 10.7
 
@@ -159,6 +159,10 @@ This callback is used to track the progress of a request upload or download. The
 
 Release Notes
 ----------------
+
+Version 1.5.4
+
+- Fixed warnings in Xcode 6
 
 Version 1.5.3
 

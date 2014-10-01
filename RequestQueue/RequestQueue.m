@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.5.3
+//  Version 1.5.4
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -61,6 +61,10 @@ NSString *const HTTPResponseErrorDomain = @"HTTPResponseErrorDomain";
 
 
 @implementation RQOperation
+
+@synthesize executing = _executing;
+@synthesize finished = _finished;
+@synthesize cancelled = _cancelled;
 
 + (instancetype)operationWithRequest:(NSURLRequest *)request
 {

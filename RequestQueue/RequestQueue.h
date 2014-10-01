@@ -1,7 +1,7 @@
 //
 //  RequestQueue.h
 //
-//  Version 1.5.3
+//  Version 1.5.4
 //
 //  Created by Nick Lockwood on 22/12/2011.
 //  Copyright (C) 2011 Charcoal Design
@@ -54,7 +54,7 @@ RequestQueueMode;
 
 @interface RQOperation : NSOperation
 
-@property (nonatomic, strong, readonly) NSURLRequest *request;
+@property (nonatomic, readonly) NSURLRequest *request;
 @property (nonatomic, copy) RQCompletionHandler completionHandler;
 @property (nonatomic, copy) RQProgressHandler uploadProgressHandler;
 @property (nonatomic, copy) RQProgressHandler downloadProgressHandler;
